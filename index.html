@@ -38,7 +38,6 @@
         }
     </script>
     <style>
-        /* Custom Scrollbar & Smooth Transitions */
         ::-webkit-scrollbar {
             width: 8px;
             height: 8px;
@@ -274,15 +273,21 @@
             </div>
 
             <!-- Admin Sub-navigation Tabs -->
-            <div class="flex bg-slate-100 p-1.5 rounded-xl border border-slate-200/80 self-start sm:self-auto">
-                <button onclick="switchAdminTab('sales')" id="tab-btn-sales" class="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-white text-merah-700 shadow-sm transition">
-                    <i class="ph-bold ph-receipt"></i>
-                    <span>Catat Penjualan &amp; Subsidi</span>
+            <div class="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+                <button onclick="refreshAllFromCloud()" title="Muat ulang data terbaru dari Google Spreadsheet" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition">
+                    <i class="ph-bold ph-arrows-clockwise text-base"></i>
+                    <span>Refresh Data Server</span>
                 </button>
-                <button onclick="switchAdminTab('products')" id="tab-btn-products" class="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-slate-600 hover:text-slate-900 transition">
-                    <i class="ph-bold ph-package"></i>
-                    <span>Manajemen Barang</span>
-                </button>
+                <div class="flex bg-slate-100 p-1.5 rounded-xl border border-slate-200/80">
+                    <button onclick="switchAdminTab('sales')" id="tab-btn-sales" class="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-white text-merah-700 shadow-sm transition">
+                        <i class="ph-bold ph-receipt"></i>
+                        <span>Catat Penjualan &amp; Subsidi</span>
+                    </button>
+                    <button onclick="switchAdminTab('products')" id="tab-btn-products" class="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-slate-600 hover:text-slate-900 transition">
+                        <i class="ph-bold ph-package"></i>
+                        <span>Manajemen Barang</span>
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -345,7 +350,7 @@
                             <i class="ph-bold ph-plus-circle"></i>
                             Catat Transaksi Penjualan
                         </h3>
-                        <p class="text-xs text-red-100 mt-0.5">Sistem otomatis memvalidasi kuota KK &amp; NIK untuk barang subsidi</p>
+                        <p class="text-xs text-red-100 mt-0.5">Arsip otomatis tersimpan ke server &amp; mengurangi stok beranda</p>
                     </div>
 
                     <form id="form-record-sale" onsubmit="handleSaleSubmit(event)" class="p-6 space-y-4">
@@ -426,8 +431,8 @@
                     <div class="p-5 sm:p-6 border-b border-slate-100">
                         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
                             <div>
-                                <h3 class="font-display font-bold text-lg text-slate-900">Riwayat Penjualan &amp; Penyaluran</h3>
-                                <p class="text-xs text-slate-500">Dilengkapi countdown otomatis masa tunggu pembelian ulang barang subsidi</p>
+                                <h3 class="font-display font-bold text-lg text-slate-900">Arsip Riwayat Penjualan &amp; Penyaluran</h3>
+                                <p class="text-xs text-slate-500">Tersimpan online untuk pengecekan kuota lintas perangkat</p>
                             </div>
                             <div class="flex flex-wrap items-center gap-2 self-start sm:self-auto">
                                 <span id="sales-filtered-badge" class="inline-flex items-center px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-100 text-slate-700">
@@ -459,7 +464,6 @@
                                 <select id="sales-filter-product" onchange="renderSalesHistory()" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:outline-none focus:border-merah-500">
                                     <option value="ALL">Semua Jenis Barang</option>
                                     <option value="SUBSIDI_ONLY">Hanya Barang Subsidi</option>
-                                    <!-- Opsi barang dinamis ditambahkan -->
                                 </select>
                             </div>
                             <div class="sm:col-span-3 flex gap-1.5">
@@ -480,7 +484,7 @@
                                     <th class="py-3.5 px-4">Pembeli &amp; Identitas</th>
                                     <th class="py-3.5 px-4">Barang &amp; Countdown Kuota</th>
                                     <th class="py-3.5 px-4 text-right">Total</th>
-                                    <th class="py-3.5 px-4 text-center">Status Sheets</th>
+                                    <th class="py-3.5 px-4 text-center">Status Server</th>
                                     <th class="py-3.5 px-4 text-center">Aksi</th>
                                 </tr>
                             </thead>
@@ -697,13 +701,12 @@
         const SPREADSHEET_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbws4wnDy-_ShhFhme33uICa-XtYUiyUzpRv6HVEqUtK5lzE5lmNYe6Uekfpj9Wdt8J8/exec";
 
         const STORAGE_KEYS = {
-            PRODUCTS: 'kdmp_gedangan_products_v2',
-            SALES: 'kdmp_gedangan_sales_v2',
-            AUTH: 'kdmp_gedangan_admin_session_v2',
-            AUTO_EXCEL: 'kdmp_gedangan_auto_excel_v2'
+            PRODUCTS: 'kdmp_gedangan_products_v3',
+            SALES: 'kdmp_gedangan_sales_v3',
+            AUTH: 'kdmp_gedangan_admin_session_v3',
+            AUTO_EXCEL: 'kdmp_gedangan_auto_excel_v3'
         };
 
-        // Helper untuk menghasilkan SVG Data URI ilustratif sebagai default foto produk
         function createProductIllustration(bgHex, accentHex, title, subtitle, iconType) {
             let iconSvg = '';
             if (iconType === 'lpg') {
@@ -811,7 +814,7 @@
         let pendingConfirmCallback = null;
 
         /**
-         * INISIALISASI APLIKASI & SINKRONISASI CLOUD
+         * INISIALISASI APLIKASI & SINKRONISASI CLOUD (PRODUK + PENJUALAN)
          */
         document.addEventListener('DOMContentLoaded', async () => {
             loadStateFromStorage();
@@ -823,8 +826,8 @@
             const autoExcelCheckbox = document.getElementById('auto-download-excel');
             if (autoExcelCheckbox) autoExcelCheckbox.checked = autoExcelPref;
 
-            // Ambil data katalog terbaru dari Google Spreadsheet agar sinkron di semua perangkat
-            await fetchProductsFromCloud();
+            // Ambil data katalog & arsip penjualan terbaru dari Google Spreadsheet
+            await fetchAllDataFromCloud();
         });
 
         function updateSyncIndicator(status) {
@@ -842,32 +845,55 @@
             }
         }
 
-        async function fetchProductsFromCloud() {
+        async function fetchAllDataFromCloud(notifyUser = false) {
             updateSyncIndicator('loading');
             try {
                 const response = await fetch(SPREADSHEET_WEBAPP_URL);
                 const result = await response.json();
 
-                if (result.status === 'success' && Array.isArray(result.products) && result.products.length > 0) {
-                    products = result.products;
-                    localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(products));
+                if (result.status === 'success') {
+                    // 1. Sinkronkan Produk
+                    if (Array.isArray(result.products) && result.products.length > 0) {
+                        products = result.products;
+                        localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(products));
+                    } else {
+                        await saveProducts(false);
+                    }
+
+                    // 2. Sinkronkan Arsip Penjualan
+                    if (Array.isArray(result.sales)) {
+                        // Pertahankan transaksi lokal yang belum sempat terkirim (FAILED/PENDING)
+                        const localUnsynced = sales.filter(s => s.syncStatus !== 'SYNCED' && !result.sales.some(rs => rs.id === s.id));
+                        sales = [...localUnsynced, ...result.sales];
+                        saveSales();
+                    }
+
                     renderPublicCatalog();
                     if (isAdminLoggedIn) {
                         renderAdminProducts();
                         populateSaleProductSelect();
+                        renderSalesHistory();
+                        updateQuotaPreview();
                     }
                     updateSyncIndicator('synced');
-                } else if (result.status === 'empty') {
-                    // Jika sheet Produk di Spreadsheet masih kosong, kirim daftar awal ke Spreadsheet
-                    await saveProducts(false);
-                    updateSyncIndicator('synced');
+                    if (notifyUser) {
+                        showToast('Data Diperbarui', 'Stok barang dan arsip penjualan berhasil disinkronkan dari server.', 'success');
+                    }
                 } else {
                     updateSyncIndicator('offline');
                 }
             } catch (error) {
                 console.warn('Gagal mengambil data terbaru dari Spreadsheet:', error);
                 updateSyncIndicator('offline');
+                if (notifyUser) {
+                    showToast('Gagal Memuat', 'Tidak dapat terhubung ke server Google Spreadsheet.', 'error');
+                }
             }
+        }
+
+        async function refreshAllFromCloud() {
+            showToast('Memuat Data...', 'Mengambil stok & arsip penjualan terbaru dari server...', 'warning');
+            await fetchAllDataFromCloud(true);
         }
 
         function loadStateFromStorage() {
@@ -910,13 +936,13 @@
                 });
                 updateSyncIndicator('synced');
                 if (notifyUser) {
-                    showToast('Tersinkron ke Server', 'Perubahan katalog barang berhasil disimpan ke Google Spreadsheet dan tampil di semua perangkat.', 'success');
+                    showToast('Tersinkron ke Server', 'Perubahan katalog & stok barang berhasil disimpan ke server.', 'success');
                 }
             } catch (err) {
                 console.error('Gagal menyinkronkan produk ke Spreadsheet:', err);
                 updateSyncIndicator('offline');
                 if (notifyUser) {
-                    showToast('Gagal Sinkron Server', 'Data tersimpan di perangkat ini, periksa koneksi internet untuk menyinkronkan ke perangkat lain.', 'error');
+                    showToast('Gagal Sinkron Server', 'Data tersimpan di perangkat ini, periksa koneksi internet.', 'error');
                 }
             }
         }
@@ -969,7 +995,7 @@
                 'Jumlah': s.qty,
                 'Harga Satuan (Rp)': s.unitPrice,
                 'Total Bayar (Rp)': s.totalPrice,
-                'Status Google Sheets': s.syncStatus === 'SYNCED' ? 'Terkirim' : 'Belum Terkirim'
+                'Status Server': s.syncStatus === 'SYNCED' ? 'Tersimpan Online' : 'Belum Terkirim'
             }));
 
             const worksheet = XLSX.utils.json_to_sheet(excelRows);
@@ -986,7 +1012,7 @@
                 { wch: 10 },  // Jumlah
                 { wch: 18 },  // Harga Satuan
                 { wch: 18 },  // Total Bayar
-                { wch: 20 }   // Status Sheets
+                { wch: 20 }   // Status Server
             ];
 
             const workbook = XLSX.utils.book_new();
@@ -1002,7 +1028,7 @@
         }
 
         /**
-         * KIRIM CATATAN PENJUALAN KE GOOGLE SPREADSHEET WEB APP
+         * KIRIM & HAPUS CATATAN PENJUALAN DI GOOGLE SPREADSHEET
          */
         async function sendToSpreadsheet(transaction) {
             try {
@@ -1028,16 +1054,36 @@
             }
         }
 
+        async function deleteSaleFromSpreadsheet(txId) {
+            try {
+                await fetch(SPREADSHEET_WEBAPP_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: {
+                        'Content-Type': 'text/plain;charset=utf-8'
+                    },
+                    body: JSON.stringify({
+                        action: 'DELETE_SALE',
+                        id: txId
+                    })
+                });
+                return true;
+            } catch (error) {
+                console.error('Gagal menghapus transaksi di Google Spreadsheet:', error);
+                return false;
+            }
+        }
+
         async function retrySyncTransaction(txId) {
             const tx = sales.find(s => s.id === txId);
             if (!tx) return;
             tx.syncStatus = 'PENDING';
             renderSalesHistory();
-            showToast('Mengirim Ulang', 'Menyinkronkan data transaksi ke Google Spreadsheet...', 'warning');
+            showToast('Mengirim Ulang', 'Menyinkronkan data transaksi ke server...', 'warning');
 
             const ok = await sendToSpreadsheet(tx);
             if (ok) {
-                showToast('Terkirim ke Spreadsheet', 'Catatan penjualan berhasil masuk ke Google Spreadsheet.', 'success');
+                showToast('Tersimpan di Server', 'Catatan penjualan berhasil masuk ke arsip server.', 'success');
             } else {
                 showToast('Gagal Sinkron', 'Periksa koneksi internet Anda lalu coba lagi.', 'error');
             }
@@ -1114,7 +1160,7 @@
         /**
          * NAVIGASI HALAMAN & AUTENTIKASI ADMIN
          */
-        function switchView(viewName) {
+        async function switchView(viewName) {
             const publicView = document.getElementById('view-public');
             const adminView = document.getElementById('view-admin');
             const navPublicBtn = document.getElementById('nav-public-btn');
@@ -1135,6 +1181,9 @@
                 renderSalesHistory();
                 renderAdminProducts();
                 updateQuotaPreview();
+
+                // Tarik data terbaru dari server saat masuk dashboard admin
+                await fetchAllDataFromCloud(false);
             } else {
                 adminView.classList.add('hidden');
                 publicView.classList.remove('hidden');
@@ -1438,7 +1487,6 @@
             }
         }
 
-        // Otomatis memperkecil ukuran foto dari galeri HP/Laptop agar muat di Google Spreadsheet
         function handleImageFileUpload(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -1760,6 +1808,7 @@
                 return;
             }
 
+            // Kurangi stok barang dan langsung sinkronkan ke server agar beranda akurat
             products[productIndex].stock -= qty;
             await saveProducts(false);
 
@@ -1799,21 +1848,21 @@
             renderAdminProducts();
 
             showToast(
-                'Transaksi Dicatat',
-                `Menyimpan ${qty} ${product.unit || 'pcs'} ${product.name} (${buyerName}) ke Google Spreadsheet...`,
+                'Menyimpan Arsip...',
+                `Mencatat transaksi ${buyerName} & memperbarui stok ${product.name} ke server...`,
                 'warning'
             );
 
             const synced = await sendToSpreadsheet(newTransaction);
             if (synced) {
                 showToast(
-                    'Terkirim ke Spreadsheet',
-                    `Data penjualan ${buyerName} & update stok berhasil masuk ke Google Spreadsheet.`,
+                    'Tersimpan di Arsip Server',
+                    `Penjualan ${buyerName} masuk ke arsip & stok di beranda sudah diperbarui (${products[productIndex].stock} ${product.unit || 'pcs'}).`,
                     'success'
                 );
             } else {
                 showToast(
-                    'Gagal Sinkron Spreadsheet',
+                    'Gagal Sinkron Server',
                     'Data tersimpan lokal, klik tombol Sync Ulang pada tabel jika internet kembali aktif.',
                     'error'
                 );
@@ -1917,7 +1966,7 @@
                     ? `<span class="inline-block px-2 py-0.5 rounded bg-merah-50 text-merah-700 border border-merah-200 text-[10px] font-bold uppercase">Subsidi</span>`
                     : `<span class="inline-block px-2 py-0.5 rounded bg-slate-100 text-slate-600 text-[10px] font-semibold uppercase">${s.category}</span>`;
 
-                let syncBadge = `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold"><i class="ph-bold ph-check"></i> Terkirim</span>`;
+                let syncBadge = `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold"><i class="ph-bold ph-cloud-check"></i> Tersimpan</span>`;
                 if (s.syncStatus === 'PENDING') {
                     syncBadge = `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-bold"><i class="ph-bold ph-spinner animate-spin"></i> Mengirim...</span>`;
                 } else if (s.syncStatus === 'FAILED') {
@@ -1967,9 +2016,9 @@
 
             openConfirmModal(
                 'Batalkan Transaksi Penjualan?',
-                `Transaksi "${tx.productName} (${tx.qty} pcs)" atas nama ${tx.buyerName} akan dihapus dan stok barang akan dikembalikan otomatis.`,
+                `Transaksi "${tx.productName} (${tx.qty} pcs)" atas nama ${tx.buyerName} akan dihapus dari arsip server dan stok barang di beranda akan dikembalikan otomatis.`,
                 async () => {
-                    const prodIdx = products.findIndex(p => p.id === tx.productId);
+                    const prodIdx = products.findIndex(p => p.id === tx.productId || p.name === tx.productName);
                     if (prodIdx !== -1) {
                         products[prodIdx].stock += tx.qty;
                         await saveProducts(false);
@@ -1983,7 +2032,9 @@
                     renderPublicCatalog();
                     renderAdminProducts();
 
-                    showToast('Transaksi Dibatalkan', `Stok "${tx.productName}" telah dikembalikan (+${tx.qty}) dan disinkronkan.`, 'warning');
+                    showToast('Membatalkan...', `Menghapus arsip & mengembalikan stok "${tx.productName}" (+${tx.qty})...`, 'warning');
+                    await deleteSaleFromSpreadsheet(txId);
+                    showToast('Transaksi Dibatalkan', `Stok "${tx.productName}" telah dikembalikan dan diperbarui di semua perangkat.`, 'success');
                 }
             );
         }
