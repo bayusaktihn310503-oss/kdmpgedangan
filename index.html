@@ -186,7 +186,13 @@
             <!-- Header & Filter Katalog -->
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
                 <div>
-                    <h3 class="font-display text-2xl font-bold text-slate-900">Ketersediaan Barang Koperasi</h3>
+                    <div class="flex flex-wrap items-center gap-2.5">
+                        <h3 class="font-display text-2xl font-bold text-slate-900">Ketersediaan Barang Koperasi</h3>
+                        <span id="cloud-sync-indicator" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                            <i class="ph-bold ph-spinner animate-spin"></i>
+                            Memuat data server...
+                        </span>
+                    </div>
                     <p class="text-sm text-slate-500 mt-0.5">Daftar harga resmi dan sisa stok barang yang tersedia saat ini</p>
                 </div>
 
@@ -494,12 +500,18 @@
             <div class="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                     <h3 class="font-display font-bold text-lg text-slate-900">Daftar Barang Koperasi</h3>
-                    <p class="text-xs text-slate-500">Kelola foto, harga jual, kategori, dan ketersediaan stok yang tampil di Halaman Beranda</p>
+                    <p class="text-xs text-slate-500">Kelola foto, harga jual, kategori, dan ketersediaan stok yang tampil di semua perangkat</p>
                 </div>
-                <button onclick="openProductModal()" class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-merah-600 hover:bg-merah-700 text-white font-semibold text-sm shadow-sm shadow-merah-600/20 transition">
-                    <i class="ph-bold ph-plus text-lg"></i>
-                    <span>Tambah Barang Baru</span>
-                </button>
+                <div class="flex flex-wrap items-center gap-2">
+                    <button onclick="forceSyncProductsToCloud()" class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm shadow-sm transition">
+                        <i class="ph-bold ph-cloud-arrow-up text-lg"></i>
+                        <span>Sinkronkan ke Server</span>
+                    </button>
+                    <button onclick="openProductModal()" class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-merah-600 hover:bg-merah-700 text-white font-semibold text-sm shadow-sm shadow-merah-600/20 transition">
+                        <i class="ph-bold ph-plus text-lg"></i>
+                        <span>Tambah Barang Baru</span>
+                    </button>
+                </div>
             </div>
 
             <!-- Grid Manajemen Barang Admin -->
@@ -682,13 +694,13 @@
         /**
          * KONFIGURASI GOOGLE SPREADSHEET WEB APP & PENYIMPANAN DATA
          */
-        const SPREADSHEET_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbzvkwYmjPvXnikWMhCAHzIF76S9njlxcpeCLVzfejyRKEJJ5f3gaGWR-gEc9PfAouzw/exec";
+        const SPREADSHEET_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbws4wnDy-_ShhFhme33uICa-XtYUiyUzpRv6HVEqUtK5lzE5lmNYe6Uekfpj9Wdt8J8/exec";
 
         const STORAGE_KEYS = {
-            PRODUCTS: 'kdmp_gedangan_products_v1',
-            SALES: 'kdmp_gedangan_sales_v1',
-            AUTH: 'kdmp_gedangan_admin_session_v1',
-            AUTO_EXCEL: 'kdmp_gedangan_auto_excel_v1'
+            PRODUCTS: 'kdmp_gedangan_products_v2',
+            SALES: 'kdmp_gedangan_sales_v2',
+            AUTH: 'kdmp_gedangan_admin_session_v2',
+            AUTO_EXCEL: 'kdmp_gedangan_auto_excel_v2'
         };
 
         // Helper untuk menghasilkan SVG Data URI ilustratif sebagai default foto produk
@@ -799,9 +811,9 @@
         let pendingConfirmCallback = null;
 
         /**
-         * INISIALISASI APLIKASI
+         * INISIALISASI APLIKASI & SINKRONISASI CLOUD
          */
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
             loadStateFromStorage();
             setDefaultSaleDate();
             renderPublicCatalog();
@@ -810,7 +822,53 @@
             const autoExcelPref = localStorage.getItem(STORAGE_KEYS.AUTO_EXCEL) === 'true';
             const autoExcelCheckbox = document.getElementById('auto-download-excel');
             if (autoExcelCheckbox) autoExcelCheckbox.checked = autoExcelPref;
+
+            // Ambil data katalog terbaru dari Google Spreadsheet agar sinkron di semua perangkat
+            await fetchProductsFromCloud();
         });
+
+        function updateSyncIndicator(status) {
+            const el = document.getElementById('cloud-sync-indicator');
+            if (!el) return;
+            if (status === 'loading') {
+                el.className = 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200';
+                el.innerHTML = '<i class="ph-bold ph-spinner animate-spin"></i> Memuat data server...';
+            } else if (status === 'synced') {
+                el.className = 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200';
+                el.innerHTML = '<i class="ph-fill ph-cloud-check"></i> Data Real-Time Online';
+            } else {
+                el.className = 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-600 border border-slate-200';
+                el.innerHTML = '<i class="ph-fill ph-cloud-slash"></i> Mode Offline / Lokal';
+            }
+        }
+
+        async function fetchProductsFromCloud() {
+            updateSyncIndicator('loading');
+            try {
+                const response = await fetch(SPREADSHEET_WEBAPP_URL);
+                const result = await response.json();
+
+                if (result.status === 'success' && Array.isArray(result.products) && result.products.length > 0) {
+                    products = result.products;
+                    localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(products));
+                    renderPublicCatalog();
+                    if (isAdminLoggedIn) {
+                        renderAdminProducts();
+                        populateSaleProductSelect();
+                    }
+                    updateSyncIndicator('synced');
+                } else if (result.status === 'empty') {
+                    // Jika sheet Produk di Spreadsheet masih kosong, kirim daftar awal ke Spreadsheet
+                    await saveProducts(false);
+                    updateSyncIndicator('synced');
+                } else {
+                    updateSyncIndicator('offline');
+                }
+            } catch (error) {
+                console.warn('Gagal mengambil data terbaru dari Spreadsheet:', error);
+                updateSyncIndicator('offline');
+            }
+        }
 
         function loadStateFromStorage() {
             try {
@@ -819,31 +877,14 @@
                     products = JSON.parse(storedProducts);
                 } else {
                     products = [...DEFAULT_PRODUCTS];
-                    saveProducts();
+                    localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(products));
                 }
 
                 const storedSales = localStorage.getItem(STORAGE_KEYS.SALES);
                 if (storedSales) {
                     sales = JSON.parse(storedSales);
                 } else {
-                    const today = getTodayString();
-                    sales = [
-                        {
-                            id: 'TRX-' + Date.now(),
-                            date: today,
-                            buyerName: 'Siti Aminah',
-                            kk: '3315120405880001',
-                            nik: '3315124405880002',
-                            productId: 'prod-lpg-3kg',
-                            productName: 'Gas LPG 3 Kg (Tabung Melon)',
-                            category: 'Subsidi',
-                            subsidyRule: 'LPG_WEEKLY',
-                            qty: 1,
-                            unitPrice: 18000,
-                            totalPrice: 18000,
-                            syncStatus: 'SYNCED'
-                        }
-                    ];
+                    sales = [];
                     saveSales();
                 }
 
@@ -855,8 +896,34 @@
             }
         }
 
-        function saveProducts() {
+        async function saveProducts(notifyUser = false) {
             localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(products));
+            try {
+                await fetch(SPREADSHEET_WEBAPP_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({
+                        action: 'SYNC_PRODUCTS',
+                        products: products
+                    })
+                });
+                updateSyncIndicator('synced');
+                if (notifyUser) {
+                    showToast('Tersinkron ke Server', 'Perubahan katalog barang berhasil disimpan ke Google Spreadsheet dan tampil di semua perangkat.', 'success');
+                }
+            } catch (err) {
+                console.error('Gagal menyinkronkan produk ke Spreadsheet:', err);
+                updateSyncIndicator('offline');
+                if (notifyUser) {
+                    showToast('Gagal Sinkron Server', 'Data tersimpan di perangkat ini, periksa koneksi internet untuk menyinkronkan ke perangkat lain.', 'error');
+                }
+            }
+        }
+
+        async function forceSyncProductsToCloud() {
+            showToast('Menyinkronkan...', 'Mengirim seluruh data barang ke Google Spreadsheet...', 'warning');
+            await saveProducts(true);
         }
 
         function saveSales() {
@@ -1371,15 +1438,29 @@
             }
         }
 
+        // Otomatis memperkecil ukuran foto dari galeri HP/Laptop agar muat di Google Spreadsheet
         function handleImageFileUpload(event) {
             const file = event.target.files[0];
             if (!file) return;
             const reader = new FileReader();
             reader.onload = function(e) {
-                const preview = document.getElementById('prod-img-preview');
-                preview.src = e.target.result;
-                preview.dataset.currentImage = e.target.result;
-                document.getElementById('prod-image-url').value = '';
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    const maxWidth = 360;
+                    const scale = Math.min(1, maxWidth / img.width);
+                    canvas.width = img.width * scale;
+                    canvas.height = img.height * scale;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+                    const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.65);
+                    const preview = document.getElementById('prod-img-preview');
+                    preview.src = compressedDataUrl;
+                    preview.dataset.currentImage = compressedDataUrl;
+                    document.getElementById('prod-image-url').value = '';
+                };
+                img.src = e.target.result;
             };
             reader.readAsDataURL(file);
         }
@@ -1393,7 +1474,7 @@
             }
         }
 
-        function handleProductSubmit(e) {
+        async function handleProductSubmit(e) {
             e.preventDefault();
             const id = document.getElementById('prod-id').value;
             const name = document.getElementById('prod-name').value.trim();
@@ -1408,7 +1489,7 @@
                 const idx = products.findIndex(p => p.id === id);
                 if (idx !== -1) {
                     products[idx] = { ...products[idx], name, category, subsidyRule, price, stock, unit, image };
-                    showToast('Barang Diperbarui', `Data "${name}" berhasil disimpan dan diperbarui di Beranda.`, 'success');
+                    showToast('Barang Diperbarui', `Menyimpan perubahan "${name}" ke server...`, 'warning');
                 }
             } else {
                 const newProd = {
@@ -1422,14 +1503,14 @@
                     image
                 };
                 products.unshift(newProd);
-                showToast('Barang Ditambahkan', `"${name}" berhasil ditambahkan ke katalog koperasi.`, 'success');
+                showToast('Barang Ditambahkan', `Menyimpan "${name}" ke server...`, 'warning');
             }
 
-            saveProducts();
             closeProductModal();
             renderAdminProducts();
             renderPublicCatalog();
             populateSaleProductSelect();
+            await saveProducts(true);
         }
 
         function confirmDeleteProduct(productId) {
@@ -1438,14 +1519,14 @@
 
             openConfirmModal(
                 'Hapus Barang dari Katalog?',
-                `Apakah Anda yakin ingin menghapus "${prod.name}"? Barang akan hilang dari halaman beranda publik.`,
-                () => {
+                `Apakah Anda yakin ingin menghapus "${prod.name}"? Barang akan hilang dari halaman beranda di semua perangkat.`,
+                async () => {
                     products = products.filter(p => p.id !== productId);
-                    saveProducts();
                     renderAdminProducts();
                     renderPublicCatalog();
                     populateSaleProductSelect();
-                    showToast('Barang Dihapus', `"${prod.name}" telah dihapus dari daftar.`, 'warning');
+                    showToast('Barang Dihapus', `"${prod.name}" dihapus, menyinkronkan ke server...`, 'warning');
+                    await saveProducts(true);
                 }
             );
         }
@@ -1680,7 +1761,7 @@
             }
 
             products[productIndex].stock -= qty;
-            saveProducts();
+            await saveProducts(false);
 
             const newTransaction = {
                 id: 'TRX-' + Date.now(),
@@ -1701,7 +1782,6 @@
             sales.unshift(newTransaction);
             saveSales();
 
-            // Jika opsi Auto-Download Excel aktif, langsung simpan file .xlsx
             if (localStorage.getItem(STORAGE_KEYS.AUTO_EXCEL) === 'true') {
                 exportSalesToExcel(true);
             }
@@ -1724,12 +1804,11 @@
                 'warning'
             );
 
-            // Kirim otomatis ke Google Spreadsheet Web App
             const synced = await sendToSpreadsheet(newTransaction);
             if (synced) {
                 showToast(
                     'Terkirim ke Spreadsheet',
-                    `Data penjualan ${buyerName} berhasil masuk ke Google Spreadsheet.`,
+                    `Data penjualan ${buyerName} & update stok berhasil masuk ke Google Spreadsheet.`,
                     'success'
                 );
             } else {
@@ -1889,11 +1968,11 @@
             openConfirmModal(
                 'Batalkan Transaksi Penjualan?',
                 `Transaksi "${tx.productName} (${tx.qty} pcs)" atas nama ${tx.buyerName} akan dihapus dan stok barang akan dikembalikan otomatis.`,
-                () => {
+                async () => {
                     const prodIdx = products.findIndex(p => p.id === tx.productId);
                     if (prodIdx !== -1) {
                         products[prodIdx].stock += tx.qty;
-                        saveProducts();
+                        await saveProducts(false);
                     }
 
                     sales = sales.filter(s => s.id !== txId);
@@ -1904,7 +1983,7 @@
                     renderPublicCatalog();
                     renderAdminProducts();
 
-                    showToast('Transaksi Dibatalkan', `Stok "${tx.productName}" telah dikembalikan (+${tx.qty}).`, 'warning');
+                    showToast('Transaksi Dibatalkan', `Stok "${tx.productName}" telah dikembalikan (+${tx.qty}) dan disinkronkan.`, 'warning');
                 }
             );
         }
