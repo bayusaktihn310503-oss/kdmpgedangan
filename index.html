@@ -115,7 +115,7 @@
     </header>
 
     <!-- ===================================================================== -->
-    <!-- VIEW 1: HALAMAN BERANDA (KATALOG PUBLIK)                              -->
+    <!-- VIEW 1: HALAMAN BERANDA (KATALOG PUBLIK & CEK KUOTA WARGA)            -->
     <!-- ===================================================================== -->
     <main id="view-public" class="flex-1">
         <!-- Hero / Banner Informasi Koperasi -->
@@ -174,6 +174,120 @@
                                     <span class="text-slate-700">Maksimal <strong>2 kemasan (1 Liter) per 1 NIK</strong> dalam <strong>1 hari</strong>.</span>
                                 </li>
                             </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================================================================= -->
+        <!-- PANEL WARGA: CEK KUOTA SUBSIDI & RIWAYAT PEMBELIAN                -->
+        <!-- ================================================================= -->
+        <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6 relative z-20">
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-lg overflow-hidden">
+                <div class="bg-gradient-to-r from-slate-900 to-slate-800 px-5 sm:px-7 py-4 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-merah-600 flex items-center justify-center shrink-0 shadow-sm">
+                            <i class="ph-bold ph-identification-card text-xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-display font-bold text-base sm:text-lg">Cek Kuota Subsidi &amp; Riwayat Pembelian Warga</h3>
+                            <p class="text-xs text-slate-300">Masukkan 16 digit Nomor KK dan NIK untuk melihat sisa kuota dan riwayat transaksi Anda</p>
+                        </div>
+                    </div>
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 text-[11px] font-semibold text-emerald-300 self-start sm:self-auto">
+                        <i class="ph-fill ph-shield-check"></i> Data Resmi Koperasi
+                    </span>
+                </div>
+
+                <div class="p-5 sm:p-7">
+                    <form onsubmit="handlePublicQuotaCheck(event)" class="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+                        <div class="md:col-span-4">
+                            <div class="flex justify-between items-center mb-1.5">
+                                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider">Nomor Kartu Keluarga (KK) <span class="text-merah-600">*</span></label>
+                                <span id="public-kk-counter" class="text-[11px] font-mono text-slate-400">0/16</span>
+                            </div>
+                            <input type="text" id="public-check-kk" maxlength="16" inputmode="numeric" required oninput="handleDigitInput(this, 'public-kk-counter')" placeholder="Masukkan 16 digit Nomor KK" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono focus:bg-white focus:outline-none focus:ring-2 focus:ring-merah-500/20 focus:border-merah-500 transition">
+                        </div>
+
+                        <div class="md:col-span-4">
+                            <div class="flex justify-between items-center mb-1.5">
+                                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider">Nomor Induk Kependudukan (NIK) <span class="text-merah-600">*</span></label>
+                                <span id="public-nik-counter" class="text-[11px] font-mono text-slate-400">0/16</span>
+                            </div>
+                            <input type="text" id="public-check-nik" maxlength="16" inputmode="numeric" required oninput="handleDigitInput(this, 'public-nik-counter')" placeholder="Masukkan 16 digit NIK KTP" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono focus:bg-white focus:outline-none focus:ring-2 focus:ring-merah-500/20 focus:border-merah-500 transition">
+                        </div>
+
+                        <div class="md:col-span-4 flex gap-2">
+                            <button type="submit" id="btn-public-check-quota" class="flex-1 py-2.5 px-5 rounded-xl bg-merah-600 hover:bg-merah-700 active:scale-[0.99] text-white font-bold text-sm shadow-md shadow-merah-600/20 transition flex items-center justify-center gap-2">
+                                <i class="ph-bold ph-magnifying-glass text-lg"></i>
+                                <span>Cek Kuota Subsidi</span>
+                            </button>
+                            <button type="button" id="btn-reset-public-quota" onclick="resetPublicQuotaCheck()" class="hidden px-3.5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold text-sm transition" title="Tutup Hasil">
+                                <i class="ph-bold ph-x"></i>
+                            </button>
+                        </div>
+                    </form>
+
+                    <!-- Alert Error Input Warga -->
+                    <div id="public-quota-error" class="hidden mt-4 p-3.5 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 font-medium flex items-center gap-2">
+                        <i class="ph-fill ph-warning-circle text-lg text-merah-600 shrink-0"></i>
+                        <span id="public-quota-error-msg"></span>
+                    </div>
+
+                    <!-- Hasil Pengecekan Kuota & Riwayat Pembelian Warga -->
+                    <div id="public-quota-result" class="hidden mt-6 pt-6 border-t border-slate-200 space-y-6">
+                        <!-- Header Identitas Warga -->
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50 p-4 rounded-xl border border-slate-200/80">
+                            <div>
+                                <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Hasil Pengecekan Identitas</span>
+                                <h4 id="result-citizen-name" class="font-display font-bold text-lg text-slate-900 mt-0.5">-</h4>
+                                <p id="result-citizen-ids" class="text-xs font-mono text-slate-600 mt-0.5">KK: - • NIK: -</p>
+                            </div>
+                            <div class="text-left sm:text-right">
+                                <span class="text-[11px] text-slate-400 block">Status Pengecekan</span>
+                                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold mt-1">
+                                    <i class="ph-fill ph-check-circle"></i> Tersinkron Real-Time
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Kartu Status Sisa Kuota 3 Barang Subsidi -->
+                        <div>
+                            <h5 class="font-display font-bold text-sm text-slate-800 mb-3 flex items-center gap-2">
+                                <i class="ph-fill ph-ticket text-merah-600 text-base"></i>
+                                Status Sisa Kuota Subsidi Saat Ini
+                            </h5>
+                            <div id="result-quota-cards" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <!-- Diisi secara dinamis oleh JS -->
+                            </div>
+                        </div>
+
+                        <!-- Tabel Riwayat Pembelian Warga -->
+                        <div>
+                            <div class="flex items-center justify-between mb-3">
+                                <h5 class="font-display font-bold text-sm text-slate-800 flex items-center gap-2">
+                                    <i class="ph-fill ph-clock-counter-clockwise text-merah-600 text-base"></i>
+                                    Riwayat Pembelian Tercatat
+                                </h5>
+                                <span id="result-history-count" class="text-xs font-semibold text-slate-500">0 Transaksi</span>
+                            </div>
+                            <div class="overflow-x-auto rounded-xl border border-slate-200">
+                                <table class="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr class="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                                            <th class="py-3 px-4">Tanggal Beli</th>
+                                            <th class="py-3 px-4">Nama Pembeli</th>
+                                            <th class="py-3 px-4">Barang Dibeli</th>
+                                            <th class="py-3 px-4 text-center">Jumlah</th>
+                                            <th class="py-3 px-4">Keterangan Kuota</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="result-history-tbody" class="divide-y divide-slate-100 text-xs sm:text-sm">
+                                        <!-- Diisi secara dinamis oleh JS -->
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -826,7 +940,6 @@
             const autoExcelCheckbox = document.getElementById('auto-download-excel');
             if (autoExcelCheckbox) autoExcelCheckbox.checked = autoExcelPref;
 
-            // Ambil data katalog & arsip penjualan terbaru dari Google Spreadsheet
             await fetchAllDataFromCloud();
         });
 
@@ -852,7 +965,6 @@
                 const result = await response.json();
 
                 if (result.status === 'success') {
-                    // 1. Sinkronkan Produk
                     if (Array.isArray(result.products) && result.products.length > 0) {
                         products = result.products;
                         localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(products));
@@ -860,9 +972,7 @@
                         await saveProducts(false);
                     }
 
-                    // 2. Sinkronkan Arsip Penjualan
                     if (Array.isArray(result.sales)) {
-                        // Pertahankan transaksi lokal yang belum sempat terkirim (FAILED/PENDING)
                         const localUnsynced = sales.filter(s => s.syncStatus !== 'SYNCED' && !result.sales.some(rs => rs.id === s.id));
                         sales = [...localUnsynced, ...result.sales];
                         saveSales();
@@ -954,6 +1064,204 @@
 
         function saveSales() {
             localStorage.setItem(STORAGE_KEYS.SALES, JSON.stringify(sales));
+        }
+
+        /**
+         * PANEL PUBLIK WARGA: CEK KUOTA SUBSIDI & RIWAYAT PEMBELIAN
+         */
+        async function handlePublicQuotaCheck(e) {
+            e.preventDefault();
+            const kk = document.getElementById('public-check-kk').value.trim();
+            const nik = document.getElementById('public-check-nik').value.trim();
+            const errorBox = document.getElementById('public-quota-error');
+            const errorMsg = document.getElementById('public-quota-error-msg');
+            const resultBox = document.getElementById('public-quota-result');
+            const btnCheck = document.getElementById('btn-public-check-quota');
+
+            errorBox.classList.add('hidden');
+
+            if (!/^\d{16}$/.test(kk)) {
+                errorMsg.textContent = 'Nomor Kartu Keluarga (KK) wajib terdiri dari tepat 16 digit angka.';
+                errorBox.classList.remove('hidden');
+                resultBox.classList.add('hidden');
+                return;
+            }
+            if (!/^\d{16}$/.test(nik)) {
+                errorMsg.textContent = 'Nomor Induk Kependudukan (NIK) wajib terdiri dari tepat 16 digit angka.';
+                errorBox.classList.remove('hidden');
+                resultBox.classList.add('hidden');
+                return;
+            }
+
+            // Tampilkan loading sebentar dan pastikan data terbaru dari server ditarik
+            const originalBtnHtml = btnCheck.innerHTML;
+            btnCheck.disabled = true;
+            btnCheck.innerHTML = '<i class="ph-bold ph-spinner animate-spin text-lg"></i><span>Mengecek Data...</span>';
+
+            await fetchAllDataFromCloud(false);
+
+            btnCheck.disabled = false;
+            btnCheck.innerHTML = originalBtnHtml;
+
+            renderPublicQuotaResult(kk, nik);
+        }
+
+        function renderPublicQuotaResult(kk, nik) {
+            const resultBox = document.getElementById('public-quota-result');
+            const btnReset = document.getElementById('btn-reset-public-quota');
+            const todayStr = getTodayString();
+            const todayObj = new Date(todayStr + 'T00:00:00');
+
+            // Cari semua riwayat transaksi yang cocok dengan KK atau NIK warga tersebut
+            const matchingSales = sales.filter(s => String(s.kk).trim() === kk || String(s.nik).trim() === nik);
+
+            // Ambil nama pembeli dari transaksi terbaru jika ada
+            const latestExactNik = matchingSales.find(s => String(s.nik).trim() === nik);
+            const latestAny = matchingSales[0];
+            const displayName = latestExactNik ? latestExactNik.buyerName : (latestAny ? latestAny.buyerName : 'Warga Desa Gedangan');
+
+            document.getElementById('result-citizen-name').textContent = displayName;
+            document.getElementById('result-citizen-ids').textContent = `No. KK: ${kk}  •  NIK: ${nik}`;
+
+            // 1. Hitung Sisa Kuota Gas LPG 3 Kg (Maks 1 tabung per 1 KK dalam 7 hari)
+            const lpgHistory = sales.filter(s => {
+                const isLpg = s.subsidyRule === 'LPG_WEEKLY' || s.productName.toLowerCase().includes('lpg');
+                if (!isLpg || String(s.kk).trim() !== kk) return false;
+                const diffDays = (todayObj - new Date(s.date + 'T00:00:00')) / (1000 * 60 * 60 * 24);
+                return diffDays >= 0 && diffDays < 7;
+            });
+            const lpgUsed = lpgHistory.reduce((sum, item) => sum + item.qty, 0);
+            const lpgRemaining = Math.max(0, 1 - lpgUsed);
+            let lpgNote = 'Kuota tersedia 1 tabung untuk minggu ini.';
+            if (lpgRemaining === 0 && lpgHistory.length > 0) {
+                const lastLpgDate = new Date(lpgHistory[0].date + 'T00:00:00');
+                const daysPassed = Math.floor((todayObj - lastLpgDate) / (1000 * 60 * 60 * 24));
+                const waitDays = Math.max(1, 7 - daysPassed);
+                lpgNote = `Sudah terpakai pada ${formatTanggalIndo(lpgHistory[0].date)}. Dapat membeli lagi dalam ${waitDays} hari.`;
+            }
+
+            // 2. Hitung Sisa Kuota Beras SPHP 5 Kg (Maks 2 sak per 1 NIK per hari)
+            const berasHistory = sales.filter(s => {
+                const isBeras = s.subsidyRule === 'BERAS_DAILY' || s.productName.toLowerCase().includes('sphp');
+                return isBeras && String(s.nik).trim() === nik && s.date === todayStr;
+            });
+            const berasUsed = berasHistory.reduce((sum, item) => sum + item.qty, 0);
+            const berasRemaining = Math.max(0, 2 - berasUsed);
+            const berasNote = berasRemaining > 0
+                ? `Tersisa ${berasRemaining} sak (5 Kg) untuk pembelian hari ini.`
+                : `Kuota harian (2 sak) sudah terpakai hari ini. Tersedia kembali besok.`;
+
+            // 3. Hitung Sisa Kuota MINYAKITA 1 Liter (Maks 2 pouch per 1 NIK per hari)
+            const minyakHistory = sales.filter(s => {
+                const isMinyak = s.subsidyRule === 'MINYAK_DAILY' || s.productName.toLowerCase().includes('minyakita');
+                return isMinyak && String(s.nik).trim() === nik && s.date === todayStr;
+            });
+            const minyakUsed = minyakHistory.reduce((sum, item) => sum + item.qty, 0);
+            const minyakRemaining = Math.max(0, 2 - minyakUsed);
+            const minyakNote = minyakRemaining > 0
+                ? `Tersisa ${minyakRemaining} pouch (1 Liter) untuk pembelian hari ini.`
+                : `Kuota harian (2 pouch) sudah terpakai hari ini. Tersedia kembali besok.`;
+
+            // Render 3 Kartu Status Kuota
+            const quotaCardsHtml = [
+                {
+                    title: 'Gas LPG 3 Kg',
+                    basis: 'Berbasis Nomor KK (7 Hari)',
+                    remaining: lpgRemaining,
+                    max: 1,
+                    unit: 'Tabung',
+                    note: lpgNote
+                },
+                {
+                    title: 'Beras SPHP 5 Kg',
+                    basis: 'Berbasis NIK (Harian)',
+                    remaining: berasRemaining,
+                    max: 2,
+                    unit: 'Sak',
+                    note: berasNote
+                },
+                {
+                    title: 'MINYAKITA 1 Liter',
+                    basis: 'Berbasis NIK (Harian)',
+                    remaining: minyakRemaining,
+                    max: 2,
+                    unit: 'Pouch',
+                    note: minyakNote
+                }
+            ].map(item => {
+                const isAvail = item.remaining > 0;
+                return `
+                    <div class="p-4 rounded-xl border ${isAvail ? 'bg-emerald-50/50 border-emerald-200' : 'bg-red-50/50 border-red-200'} flex flex-col justify-between">
+                        <div>
+                            <div class="flex items-center justify-between gap-2">
+                                <span class="font-display font-bold text-slate-900 text-sm">${item.title}</span>
+                                <span class="px-2 py-0.5 rounded-md text-[11px] font-bold ${isAvail ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-merah-700'}">
+                                    ${isAvail ? 'Tersedia' : 'Kuota Habis'}
+                                </span>
+                            </div>
+                            <p class="text-[11px] text-slate-500 mt-0.5">${item.basis}</p>
+                            <div class="mt-3 flex items-baseline gap-1.5">
+                                <span class="font-display font-extrabold text-2xl ${isAvail ? 'text-emerald-700' : 'text-merah-700'}">${item.remaining}</span>
+                                <span class="text-xs font-semibold text-slate-600">/ ${item.max} ${item.unit}</span>
+                            </div>
+                        </div>
+                        <p class="text-[11px] text-slate-600 mt-2.5 pt-2 border-t border-slate-200/70 leading-relaxed">${item.note}</p>
+                    </div>
+                `;
+            }).join('');
+
+            document.getElementById('result-quota-cards').innerHTML = quotaCardsHtml;
+
+            // Render Tabel Riwayat Pembelian Warga
+            document.getElementById('result-history-count').textContent = `${matchingSales.length} Transaksi`;
+            const tbody = document.getElementById('result-history-tbody');
+
+            if (matchingSales.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="py-8 px-4 text-center text-xs text-slate-500">
+                            Belum ada riwayat transaksi pembelian yang tercatat untuk Nomor KK <strong>${kk}</strong> dan NIK <strong>${nik}</strong>. Seluruh kuota subsidi Anda masih utuh.
+                        </td>
+                    </tr>
+                `;
+            } else {
+                tbody.innerHTML = matchingSales.map(tx => {
+                    const badgeCat = tx.category === 'Subsidi'
+                        ? `<span class="inline-block px-2 py-0.5 rounded bg-merah-50 text-merah-700 border border-merah-200 text-[10px] font-bold uppercase mr-1">Subsidi</span>`
+                        : `<span class="inline-block px-2 py-0.5 rounded bg-slate-100 text-slate-600 text-[10px] font-semibold uppercase mr-1">${tx.category}</span>`;
+
+                    const countdownInfo = getQuotaCountdownBadge(tx) || `<span class="text-[11px] text-slate-400">Pembelian Reguler</span>`;
+
+                    return `
+                        <tr class="hover:bg-slate-50 transition">
+                            <td class="py-3 px-4 whitespace-nowrap font-semibold text-slate-800">${formatTanggalIndo(tx.date)}</td>
+                            <td class="py-3 px-4">
+                                <span class="font-bold text-slate-900 block">${tx.buyerName}</span>
+                                <span class="text-[10px] font-mono text-slate-400">NIK: ${tx.nik}</span>
+                            </td>
+                            <td class="py-3 px-4">
+                                ${badgeCat}
+                                <span class="font-medium text-slate-800">${tx.productName}</span>
+                            </td>
+                            <td class="py-3 px-4 text-center font-bold text-slate-900">${tx.qty} pcs</td>
+                            <td class="py-3 px-4">${countdownInfo}</td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+
+            resultBox.classList.remove('hidden');
+            btnReset.classList.remove('hidden');
+        }
+
+        function resetPublicQuotaCheck() {
+            document.getElementById('public-check-kk').value = '';
+            document.getElementById('public-check-nik').value = '';
+            document.getElementById('public-kk-counter').textContent = '0/16';
+            document.getElementById('public-nik-counter').textContent = '0/16';
+            document.getElementById('public-quota-error').classList.add('hidden');
+            document.getElementById('public-quota-result').classList.add('hidden');
+            document.getElementById('btn-reset-public-quota').classList.add('hidden');
         }
 
         /**
@@ -1182,7 +1490,6 @@
                 renderAdminProducts();
                 updateQuotaPreview();
 
-                // Tarik data terbaru dari server saat masuk dashboard admin
                 await fetchAllDataFromCloud(false);
             } else {
                 adminView.classList.add('hidden');
@@ -1808,7 +2115,6 @@
                 return;
             }
 
-            // Kurangi stok barang dan langsung sinkronkan ke server agar beranda akurat
             products[productIndex].stock -= qty;
             await saveProducts(false);
 
