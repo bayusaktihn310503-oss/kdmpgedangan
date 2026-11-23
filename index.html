@@ -633,13 +633,9 @@
             <div class="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                     <h3 class="font-display font-bold text-lg text-slate-900">Daftar Barang Koperasi</h3>
-                    <p class="text-xs text-slate-500">Kelola foto kualitas asli (HD), harga jual, kategori, dan ketersediaan stok yang tampil di semua perangkat</p>
+                    <p class="text-xs text-slate-500">Foto produk diunggah dalam resolusi asli tanpa kompresi dan langsung tersimpan ke Google Spreadsheet</p>
                 </div>
                 <div class="flex flex-wrap items-center gap-2">
-                    <button onclick="forceSyncProductsToCloud()" class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm shadow-sm transition">
-                        <i class="ph-bold ph-cloud-arrow-up text-lg"></i>
-                        <span>Sinkronkan ke Server</span>
-                    </button>
                     <button onclick="openProductModal()" class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-merah-600 hover:bg-merah-700 text-white font-semibold text-sm shadow-sm shadow-merah-600/20 transition">
                         <i class="ph-bold ph-plus text-lg"></i>
                         <span>Tambah Barang Baru</span>
@@ -934,7 +930,7 @@
 
                 <div class="flex items-center justify-end gap-2.5 pt-4 border-t border-slate-100">
                     <button type="button" onclick="closeProductModal()" class="px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100 transition">Batal</button>
-                    <button type="submit" class="px-5 py-2.5 rounded-xl text-sm font-bold text-white bg-merah-600 hover:bg-merah-700 shadow-sm transition">Simpan Barang</button>
+                    <button type="submit" id="btn-submit-product" class="px-5 py-2.5 rounded-xl text-sm font-bold text-white bg-merah-600 hover:bg-merah-700 shadow-sm transition">Simpan Barang</button>
                 </div>
             </form>
         </div>
@@ -967,11 +963,11 @@
         const SPREADSHEET_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbws4wnDy-_ShhFhme33uICa-XtYUiyUzpRv6HVEqUtK5lzE5lmNYe6Uekfpj9Wdt8J8/exec";
 
         const STORAGE_KEYS = {
-            PRODUCTS: 'kdmp_gedangan_products_v4',
-            SALES: 'kdmp_gedangan_sales_v4',
-            BROCHURE: 'kdmp_gedangan_brochure_v4',
-            AUTH: 'kdmp_gedangan_admin_session_v4',
-            AUTO_EXCEL: 'kdmp_gedangan_auto_excel_v4'
+            PRODUCTS_META: 'kdmp_gedangan_products_meta_v5',
+            SALES: 'kdmp_gedangan_sales_v5',
+            BROCHURE: 'kdmp_gedangan_brochure_v5',
+            AUTH: 'kdmp_gedangan_admin_session_v5',
+            AUTO_EXCEL: 'kdmp_gedangan_auto_excel_v5'
         };
 
         function createProductIllustration(bgHex, accentHex, title, subtitle, iconType) {
@@ -1083,7 +1079,7 @@
         let pendingConfirmCallback = null;
 
         /**
-         * INISIALISASI APLIKASI & SINKRONISASI CLOUD (PRODUK + PENJUALAN + BROSUR)
+         * INISIALISASI APLIKASI & SINKRONISASI CLOUD
          */
         document.addEventListener('DOMContentLoaded', async () => {
             loadStateFromStorage();
@@ -1096,10 +1092,9 @@
             const autoExcelCheckbox = document.getElementById('auto-download-excel');
             if (autoExcelCheckbox) autoExcelCheckbox.checked = autoExcelPref;
 
-            // Tampilkan pop-up brosur dari cache lokal lebih dulu jika ada
             checkAndShowBrochurePopup();
 
-            // Tarik data terbaru (produk, penjualan, dan brosur) dari Google Spreadsheet
+            // Tarik data terbaru (produk beserta foto HD, penjualan, dan brosur) dari Google Spreadsheet
             await fetchAllDataFromCloud(false, true);
         });
 
@@ -1121,18 +1116,19 @@
         async function fetchAllDataFromCloud(notifyUser = false, isInitialLoad = false) {
             updateSyncIndicator('loading');
             try {
-                const response = await fetch(SPREADSHEET_WEBAPP_URL);
+                const response = await fetch(SPREADSHEET_WEBAPP_URL + '?t=' + Date.now());
                 const result = await response.json();
 
                 if (result.status === 'success') {
-                    // 1. Sinkronkan Produk
+                    // 1. Sinkronkan Produk beserta Gambar HD dari Spreadsheet
                     if (Array.isArray(result.products) && result.products.length > 0) {
                         products = result.products;
-                        try {
-                            localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(products));
-                        } catch (e) { /* Abaikan jika localStorage penuh oleh gambar HD */ }
+                        saveProductsMetaToLocal();
                     } else {
-                        await saveProducts(false);
+                        // Jika tab Produk di Spreadsheet masih kosong, isi dengan produk bawaan satu per satu
+                        for (const item of products) {
+                            await saveSingleProductToCloud(item, false);
+                        }
                     }
 
                     // 2. Sinkronkan Arsip Penjualan
@@ -1152,7 +1148,7 @@
                         };
                         try {
                             localStorage.setItem(STORAGE_KEYS.BROCHURE, JSON.stringify(brochureConfig));
-                        } catch (e) { /* Abaikan jika localStorage penuh */ }
+                        } catch (e) { /* Abaikan jika ukuran melebihi localStorage */ }
 
                         syncBrochureFormFromConfig();
                         updateReopenBrochureButton();
@@ -1171,7 +1167,7 @@
                     }
                     updateSyncIndicator('synced');
                     if (notifyUser) {
-                        showToast('Data Diperbarui', 'Katalog, arsip penjualan, dan brosur berhasil disinkronkan dari server.', 'success');
+                        showToast('Data Diperbarui', 'Katalog, foto barang HD, arsip penjualan, dan brosur berhasil dimuat dari server.', 'success');
                     }
                 } else {
                     updateSyncIndicator('offline');
@@ -1186,18 +1182,31 @@
         }
 
         async function refreshAllFromCloud() {
-            showToast('Memuat Data...', 'Mengambil stok, arsip penjualan, dan brosur terbaru dari server...', 'warning');
+            showToast('Memuat Data...', 'Mengambil stok, foto barang HD, dan brosur terbaru dari server...', 'warning');
             await fetchAllDataFromCloud(true, false);
+        }
+
+        function saveProductsMetaToLocal() {
+            try {
+                // Simpan metadata ringan di localStorage tanpa membebani kuota memori browser dengan string base64 raksasa
+                const lightweightList = products.map(p => ({
+                    ...p,
+                    image: (p.image && p.image.length > 50000) ? '' : p.image
+                }));
+                localStorage.setItem(STORAGE_KEYS.PRODUCTS_META, JSON.stringify(lightweightList));
+            } catch (e) {
+                console.warn('Melewati cache localStorage produk:', e);
+            }
         }
 
         function loadStateFromStorage() {
             try {
-                const storedProducts = localStorage.getItem(STORAGE_KEYS.PRODUCTS);
+                const storedProducts = localStorage.getItem(STORAGE_KEYS.PRODUCTS_META);
                 if (storedProducts) {
                     products = JSON.parse(storedProducts);
                 } else {
                     products = [...DEFAULT_PRODUCTS];
-                    localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(products));
+                    saveProductsMetaToLocal();
                 }
 
                 const storedSales = localStorage.getItem(STORAGE_KEYS.SALES);
@@ -1221,39 +1230,71 @@
             }
         }
 
-        async function saveProducts(notifyUser = false) {
-            try {
-                localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(products));
-            } catch (e) {
-                console.warn('Kapasitas localStorage penuh, menyimpan langsung ke server Spreadsheet.');
-            }
-
+        /**
+         * PENYIMPANAN BARANG KE SPREADSHEET (1 BARANG PER KIRIM — SAMA SEPERTI FITUR BROSUR)
+         */
+        async function saveSingleProductToCloud(productObj, notifyUser = false) {
+            saveProductsMetaToLocal();
             try {
                 await fetch(SPREADSHEET_WEBAPP_URL, {
                     method: 'POST',
                     mode: 'no-cors',
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                     body: JSON.stringify({
-                        action: 'SYNC_PRODUCTS',
-                        products: products
+                        action: 'SAVE_SINGLE_PRODUCT',
+                        product: productObj
                     })
                 });
                 updateSyncIndicator('synced');
                 if (notifyUser) {
-                    showToast('Tersinkron ke Server', 'Perubahan katalog & foto HD berhasil disimpan ke server.', 'success');
+                    showToast('Tersimpan di Server', `Barang "${productObj.name}" dan foto kualitas asli berhasil disimpan ke Spreadsheet.`, 'success');
                 }
+                return true;
             } catch (err) {
-                console.error('Gagal menyinkronkan produk ke Spreadsheet:', err);
+                console.error('Gagal menyimpan barang ke Spreadsheet:', err);
                 updateSyncIndicator('offline');
                 if (notifyUser) {
-                    showToast('Gagal Sinkron Server', 'Periksa koneksi internet Anda lalu coba lagi.', 'error');
+                    showToast('Gagal Simpan Server', 'Periksa koneksi internet Anda lalu coba lagi.', 'error');
                 }
+                return false;
             }
         }
 
-        async function forceSyncProductsToCloud() {
-            showToast('Menyinkronkan...', 'Mengirim seluruh data barang ke Google Spreadsheet...', 'warning');
-            await saveProducts(true);
+        async function updateProductStockInCloud(productId, newStock) {
+            saveProductsMetaToLocal();
+            try {
+                await fetch(SPREADSHEET_WEBAPP_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({
+                        action: 'UPDATE_PRODUCT_STOCK',
+                        id: productId,
+                        stock: newStock
+                    })
+                });
+            } catch (err) {
+                console.error('Gagal memperbarui stok di Spreadsheet:', err);
+            }
+        }
+
+        async function deleteProductFromCloud(productId) {
+            saveProductsMetaToLocal();
+            try {
+                await fetch(SPREADSHEET_WEBAPP_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({
+                        action: 'DELETE_PRODUCT',
+                        id: productId
+                    })
+                });
+                return true;
+            } catch (err) {
+                console.error('Gagal menghapus barang dari Spreadsheet:', err);
+                return false;
+            }
         }
 
         function saveSales() {
@@ -1325,7 +1366,6 @@
             const file = event.target.files[0];
             if (!file) return;
 
-            // Baca file secara langsung tanpa kompresi agar brosur tajam dan jelas
             const reader = new FileReader();
             reader.onload = function(e) {
                 const rawDataUrl = e.target.result;
@@ -1991,10 +2031,12 @@
                     quotaHint = `<div class="mt-3 pt-2.5 border-t border-slate-100 flex items-center gap-1.5 text-[11px] font-medium text-amber-700"><i class="ph-fill ph-shield-warning"></i> Maks. 2 pcs / 1 NIK / hari</div>`;
                 }
 
+                const imgSrc = p.image || 'https://placehold.co/400x260/fee2e2/991b1b?text=Memuat+Foto...';
+
                 return `
                     <article class="bg-white rounded-2xl border border-slate-200/90 overflow-hidden shadow-sm hover:shadow-md hover:-translate-y-0.5 transition duration-200 flex flex-col">
                         <div class="relative h-52 bg-white border-b border-slate-100 overflow-hidden flex items-center justify-center p-2">
-                            <img src="${p.image}" alt="${p.name}" onerror="this.src='https://placehold.co/400x260/fee2e2/991b1b?text=Koperasi+Gedangan'" class="w-full h-full object-contain ${p.stock <= 0 ? 'grayscale opacity-75' : ''}">
+                            <img src="${imgSrc}" alt="${p.name}" onerror="this.src='https://placehold.co/400x260/fee2e2/991b1b?text=Koperasi+Gedangan'" class="w-full h-full object-contain ${p.stock <= 0 ? 'grayscale opacity-75' : ''}">
                             <span class="absolute top-3 left-3 px-2.5 py-1 rounded-lg text-[11px] font-bold uppercase tracking-wide ${catBadgeClass}">
                                 ${p.category}
                             </span>
@@ -2084,10 +2126,12 @@
                     'MINYAK_DAILY': 'Subsidi: Max 2 / NIK / Hari'
                 };
 
+                const imgSrc = p.image || 'https://placehold.co/400x260/fee2e2/991b1b?text=Memuat+Foto...';
+
                 return `
                     <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm flex flex-col">
                         <div class="relative h-44 bg-white border-b border-slate-100 flex items-center justify-center p-2">
-                            <img src="${p.image}" alt="${p.name}" onerror="this.src='https://placehold.co/400x260/fee2e2/991b1b?text=Foto+Barang'" class="w-full h-full object-contain">
+                            <img src="${imgSrc}" alt="${p.name}" onerror="this.src='https://placehold.co/400x260/fee2e2/991b1b?text=Foto+Barang'" class="w-full h-full object-contain">
                             <span class="absolute top-3 left-3 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-slate-900/80 text-white backdrop-blur-sm">
                                 ${p.category}
                             </span>
@@ -2142,9 +2186,10 @@
                 document.getElementById('prod-price').value = prod.price;
                 document.getElementById('prod-stock').value = prod.stock;
                 document.getElementById('prod-unit').value = prod.unit || '';
-                document.getElementById('prod-image-url').value = prod.image.startsWith('data:') ? '' : prod.image;
-                document.getElementById('prod-img-preview').src = prod.image;
-                document.getElementById('prod-img-preview').dataset.currentImage = prod.image;
+                document.getElementById('prod-image-url').value = (prod.image && !prod.image.startsWith('data:')) ? prod.image : '';
+                const currentImg = prod.image || 'https://placehold.co/400x260/fee2e2/991b1b?text=Barang+Koperasi';
+                document.getElementById('prod-img-preview').src = currentImg;
+                document.getElementById('prod-img-preview').dataset.currentImage = prod.image || '';
             } else {
                 title.textContent = 'Tambah Barang Baru';
                 document.getElementById('prod-id').value = '';
@@ -2186,6 +2231,7 @@
                 preview.src = rawDataUrl;
                 preview.dataset.currentImage = rawDataUrl;
                 document.getElementById('prod-image-url').value = '';
+                showToast('Foto Barang Dimuat', 'Foto kualitas asli siap disimpan ke server.', 'success');
             };
             reader.readAsDataURL(file);
         }
@@ -2210,14 +2256,20 @@
             const unit = document.getElementById('prod-unit').value.trim() || 'Pcs';
             const image = document.getElementById('prod-img-preview').dataset.currentImage || 'https://placehold.co/400x260/fee2e2/991b1b?text=Barang+Koperasi';
 
+            const btn = document.getElementById('btn-submit-product');
+            const oldText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = 'Menyimpan...';
+
+            let savedProduct;
             if (id) {
                 const idx = products.findIndex(p => p.id === id);
                 if (idx !== -1) {
                     products[idx] = { ...products[idx], name, category, subsidyRule, price, stock, unit, image };
-                    showToast('Barang Diperbarui', `Menyimpan perubahan "${name}" kualitas asli ke server...`, 'warning');
+                    savedProduct = products[idx];
                 }
             } else {
-                const newProd = {
+                savedProduct = {
                     id: 'prod-' + Date.now(),
                     name,
                     category,
@@ -2227,15 +2279,19 @@
                     unit,
                     image
                 };
-                products.unshift(newProd);
-                showToast('Barang Ditambahkan', `Menyimpan "${name}" kualitas asli ke server...`, 'warning');
+                products.unshift(savedProduct);
             }
 
-            closeProductModal();
             renderAdminProducts();
             renderPublicCatalog();
             populateSaleProductSelect();
-            await saveProducts(true);
+            closeProductModal();
+
+            showToast('Menyimpan Barang...', `Mengunggah "${name}" dan foto kualitas asli ke Spreadsheet...`, 'warning');
+            await saveSingleProductToCloud(savedProduct, true);
+
+            btn.disabled = false;
+            btn.textContent = oldText;
         }
 
         function confirmDeleteProduct(productId) {
@@ -2250,8 +2306,9 @@
                     renderAdminProducts();
                     renderPublicCatalog();
                     populateSaleProductSelect();
-                    showToast('Barang Dihapus', `"${prod.name}" dihapus, menyinkronkan ke server...`, 'warning');
-                    await saveProducts(true);
+                    showToast('Menghapus Barang...', `Menghapus "${prod.name}" dari Spreadsheet...`, 'warning');
+                    await deleteProductFromCloud(productId);
+                    showToast('Barang Dihapus', `"${prod.name}" berhasil dihapus dari server.`, 'success');
                 }
             );
         }
@@ -2486,7 +2543,7 @@
             }
 
             products[productIndex].stock -= qty;
-            await saveProducts(false);
+            await updateProductStockInCloud(product.id, products[productIndex].stock);
 
             const newTransaction = {
                 id: 'TRX-' + Date.now(),
@@ -2697,7 +2754,7 @@
                     const prodIdx = products.findIndex(p => p.id === tx.productId || p.name === tx.productName);
                     if (prodIdx !== -1) {
                         products[prodIdx].stock += tx.qty;
-                        await saveProducts(false);
+                        await updateProductStockInCloud(products[prodIdx].id, products[prodIdx].stock);
                     }
 
                     sales = sales.filter(s => s.id !== txId);
