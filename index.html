@@ -58,12 +58,19 @@
                               linear-gradient(135deg, #b91c1c 0%, #7f1d1d 100%);
             background-size: 20px 20px, 100% 100%;
         }
+        @keyframes popIn {
+            0% { opacity: 0; transform: scale(0.94) translateY(8px); }
+            100% { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        .animate-pop-in {
+            animation: popIn 0.25s ease-out forwards;
+        }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800 font-sans antialiased min-h-screen flex flex-col">
 
     <!-- Toast Notification Container -->
-    <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-3 max-w-md w-full pointer-events-none px-4 sm:px-0"></div>
+    <div id="toast-container" class="fixed top-5 right-5 z-[60] flex flex-col gap-3 max-w-md w-full pointer-events-none px-4 sm:px-0"></div>
 
     <!-- Navigation Header -->
     <header class="bg-white/95 backdrop-blur-md border-b border-slate-200 sticky top-0 z-40 shadow-sm">
@@ -135,7 +142,7 @@
                             Transparansi stok barang secara real-time untuk masyarakat Desa Gedangan, Kecamatan Wirosari, Kabupaten Grobogan. Penyaluran barang bersubsidi tepat sasaran sesuai ketentuan kuota KK &amp; NIK.
                         </p>
                         
-                        <!-- Info Kontak & Alamat Chips -->
+                        <!-- Info Kontak, Alamat & Tombol Brosur -->
                         <div class="pt-2 flex flex-wrap gap-3 text-xs sm:text-sm">
                             <div class="flex items-center gap-2 bg-white/10 backdrop-blur-md px-3.5 py-2 rounded-xl border border-white/15">
                                 <i class="ph-fill ph-map-pin text-red-200 text-lg"></i>
@@ -145,6 +152,10 @@
                                 <i class="ph-fill ph-whatsapp-logo text-emerald-600 text-lg"></i>
                                 <span>Layanan Koperasi: 0822-4101-0366</span>
                             </a>
+                            <button id="btn-reopen-brochure" onclick="openBrochurePopup(true)" class="hidden items-center gap-2 bg-amber-400 hover:bg-amber-300 text-slate-900 font-bold px-4 py-2 rounded-xl shadow-sm transition">
+                                <i class="ph-fill ph-megaphone text-lg"></i>
+                                <span>Lihat Brosur Pengumuman</span>
+                            </button>
                         </div>
                     </div>
 
@@ -377,7 +388,7 @@
     <!-- ===================================================================== -->
     <main id="view-admin" class="hidden flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <!-- Admin Top Banner -->
-        <div class="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 mb-6 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div class="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 mb-6 shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-4">
             <div>
                 <div class="flex items-center gap-2">
                     <span class="px-2.5 py-0.5 rounded-md bg-merah-100 text-merah-700 text-xs font-bold uppercase tracking-wider">Panel Pengurus</span>
@@ -387,19 +398,23 @@
             </div>
 
             <!-- Admin Sub-navigation Tabs -->
-            <div class="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+            <div class="flex flex-wrap items-center gap-2 self-start lg:self-auto">
                 <button onclick="refreshAllFromCloud()" title="Muat ulang data terbaru dari Google Spreadsheet" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition">
                     <i class="ph-bold ph-arrows-clockwise text-base"></i>
-                    <span>Refresh Data Server</span>
+                    <span>Refresh Data</span>
                 </button>
-                <div class="flex bg-slate-100 p-1.5 rounded-xl border border-slate-200/80">
-                    <button onclick="switchAdminTab('sales')" id="tab-btn-sales" class="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-white text-merah-700 shadow-sm transition">
+                <div class="flex flex-wrap bg-slate-100 p-1.5 rounded-xl border border-slate-200/80 gap-1">
+                    <button onclick="switchAdminTab('sales')" id="tab-btn-sales" class="flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold bg-white text-merah-700 shadow-sm transition">
                         <i class="ph-bold ph-receipt"></i>
-                        <span>Catat Penjualan &amp; Subsidi</span>
+                        <span>Catat Penjualan</span>
                     </button>
-                    <button onclick="switchAdminTab('products')" id="tab-btn-products" class="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-slate-600 hover:text-slate-900 transition">
+                    <button onclick="switchAdminTab('products')" id="tab-btn-products" class="flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold text-slate-600 hover:text-slate-900 transition">
                         <i class="ph-bold ph-package"></i>
                         <span>Manajemen Barang</span>
+                    </button>
+                    <button onclick="switchAdminTab('brochure')" id="tab-btn-brochure" class="flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold text-slate-600 hover:text-slate-900 transition">
+                        <i class="ph-bold ph-megaphone"></i>
+                        <span>Pop-up Brosur</span>
                     </button>
                 </div>
             </div>
@@ -618,7 +633,7 @@
             <div class="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                     <h3 class="font-display font-bold text-lg text-slate-900">Daftar Barang Koperasi</h3>
-                    <p class="text-xs text-slate-500">Kelola foto, harga jual, kategori, dan ketersediaan stok yang tampil di semua perangkat</p>
+                    <p class="text-xs text-slate-500">Kelola foto kualitas asli (HD), harga jual, kategori, dan ketersediaan stok yang tampil di semua perangkat</p>
                 </div>
                 <div class="flex flex-wrap items-center gap-2">
                     <button onclick="forceSyncProductsToCloud()" class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm shadow-sm transition">
@@ -635,6 +650,107 @@
             <!-- Grid Manajemen Barang Admin -->
             <div id="admin-products-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 <!-- Diisi secara dinamis -->
+            </div>
+        </section>
+
+        <!-- ================================================================= -->
+        <!-- TAB ADMIN C: PENGATURAN POP-UP BROSUR BERANDA                     -->
+        <!-- ================================================================= -->
+        <section id="admin-tab-brochure" class="hidden space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                <!-- Form Upload & Pengaturan Brosur -->
+                <div class="lg:col-span-6 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div class="bg-gradient-to-r from-slate-800 to-slate-900 px-6 py-4 text-white">
+                        <h3 class="font-display font-bold text-lg flex items-center gap-2">
+                            <i class="ph-bold ph-megaphone"></i>
+                            Pengaturan Pop-up Brosur Beranda
+                        </h3>
+                        <p class="text-xs text-slate-300 mt-0.5">Gambar diunggah tanpa kompresi (kualitas asli) &amp; tersimpan di Spreadsheet</p>
+                    </div>
+
+                    <form onsubmit="handleBrochureSave(event)" class="p-6 space-y-5">
+                        <!-- Toggle Aktifkan Pop-up -->
+                        <div class="flex items-center justify-between p-4 rounded-xl bg-slate-50 border border-slate-200">
+                            <div>
+                                <span class="font-display font-bold text-sm text-slate-900 block">Tampilkan Pop-up Brosur di Beranda</span>
+                                <span class="text-xs text-slate-500">Jika aktif, warga yang membuka website akan langsung melihat brosur ini</span>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer shrink-0">
+                                <input type="checkbox" id="brochure-enabled" onchange="updateBrochurePreview()" class="sr-only peer">
+                                <div class="w-12 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-merah-600"></div>
+                            </label>
+                        </div>
+
+                        <!-- Judul Brosur -->
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Judul / Keterangan Brosur</label>
+                            <input type="text" id="brochure-title" oninput="updateBrochurePreview()" placeholder="Contoh: Jadwal Penyaluran Gas LPG 3 Kg & Beras SPHP Minggu Ini" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-merah-500/20 focus:border-merah-500">
+                        </div>
+
+                        <!-- Upload Gambar Brosur Kualitas Asli -->
+                        <div class="space-y-2.5">
+                            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider">Unggah Gambar Brosur (Resolusi Asli / HD) <span class="text-merah-600">*</span></label>
+                            <label class="flex flex-col items-center justify-center gap-2 p-5 rounded-2xl border-2 border-dashed border-merah-300 bg-merah-50/40 hover:bg-merah-50 text-merah-700 cursor-pointer transition text-center">
+                                <div class="w-11 h-11 rounded-xl bg-white text-merah-600 shadow-sm flex items-center justify-center">
+                                    <i class="ph-bold ph-image text-2xl"></i>
+                                </div>
+                                <div>
+                                    <span class="text-xs sm:text-sm font-bold block">Klik untuk Memilih File Gambar Brosur</span>
+                                    <span class="text-[11px] text-slate-500">JPG, PNG, atau WEBP — Tanpa kompresi agar tulisan brosur terbaca tajam</span>
+                                </div>
+                                <input type="file" id="brochure-file-input" accept="image/*" onchange="handleBrochureFileUpload(event)" class="hidden">
+                            </label>
+
+                            <div class="pt-1">
+                                <label class="block text-[11px] font-semibold text-slate-500 mb-1">Atau gunakan tautan URL gambar brosur:</label>
+                                <input type="url" id="brochure-image-url" oninput="handleBrochureUrlInput(this.value)" placeholder="https://..." class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:outline-none focus:border-merah-500">
+                            </div>
+                        </div>
+
+                        <div class="flex flex-wrap items-center gap-2.5 pt-2">
+                            <button type="submit" id="btn-save-brochure" class="flex-1 py-3 px-5 rounded-xl bg-merah-600 hover:bg-merah-700 text-white font-bold text-sm shadow-md shadow-merah-600/20 transition flex items-center justify-center gap-2">
+                                <i class="ph-bold ph-cloud-arrow-up text-lg"></i>
+                                <span>Simpan &amp; Terbitkan Brosur</span>
+                            </button>
+                            <button type="button" onclick="confirmClearBrochure()" class="py-3 px-4 rounded-xl bg-slate-100 hover:bg-red-50 text-slate-600 hover:text-merah-700 font-semibold text-sm transition" title="Hapus Brosur">
+                                <i class="ph-bold ph-trash text-lg"></i>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Preview Tampilan Pop-up Brosur -->
+                <div class="lg:col-span-6 bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h4 class="font-display font-bold text-base text-slate-900">Pratinjau Tampilan Pop-up di Beranda</h4>
+                            <p class="text-xs text-slate-500">Gambar ditampilkan jernih dalam rasio asli tanpa pemotongan</p>
+                        </div>
+                        <span id="brochure-status-badge" class="px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-600">
+                            Nonaktif
+                        </span>
+                    </div>
+
+                    <div class="bg-slate-900/90 rounded-2xl p-4 sm:p-6 flex items-center justify-center min-h-[340px]">
+                        <div class="bg-white rounded-2xl max-w-md w-full overflow-hidden shadow-2xl border border-slate-200">
+                            <div class="px-4 py-3 bg-merah-700 text-white flex items-center justify-between gap-2">
+                                <div class="flex items-center gap-2 min-w-0">
+                                    <i class="ph-fill ph-megaphone text-amber-300 text-lg shrink-0"></i>
+                                    <span id="admin-brochure-preview-title" class="font-display font-bold text-xs sm:text-sm truncate">Pengumuman Koperasi Desa Merah Putih</span>
+                                </div>
+                                <span class="w-7 h-7 rounded-full bg-white/15 flex items-center justify-center text-white text-xs shrink-0">
+                                    <i class="ph-bold ph-x"></i>
+                                </span>
+                            </div>
+                            <div class="bg-slate-100 flex items-center justify-center max-h-[380px] overflow-auto">
+                                <img id="admin-brochure-preview-img" src="https://placehold.co/600x750/fef2f2/991b1b?text=Belum+Ada+Gambar+Brosur" alt="Preview Brosur" class="w-full h-auto object-contain">
+                            </div>
+                            <div class="p-3 bg-white border-t border-slate-100 flex justify-end">
+                                <span class="px-4 py-1.5 rounded-xl bg-slate-900 text-white text-xs font-bold">Tutup Brosur</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </section>
     </main>
@@ -660,6 +776,42 @@
             </div>
         </div>
     </footer>
+
+    <!-- ===================================================================== -->
+    <!-- MODAL POP-UP BROSUR BERANDA (UNTUK WARGA)                             -->
+    <!-- ===================================================================== -->
+    <div id="modal-public-brochure" class="hidden fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 overflow-y-auto" onclick="if(event.target === this) closeBrochurePopup()">
+        <div class="bg-white rounded-3xl max-w-xl w-full overflow-hidden shadow-2xl border border-white/20 my-auto animate-pop-in">
+            <!-- Header Pop-up -->
+            <div class="px-5 py-3.5 bg-gradient-to-r from-merah-700 to-merah-800 text-white flex items-center justify-between gap-3">
+                <div class="flex items-center gap-2.5 min-w-0">
+                    <div class="w-8 h-8 rounded-lg bg-white/15 flex items-center justify-center shrink-0">
+                        <i class="ph-fill ph-megaphone text-amber-300 text-lg"></i>
+                    </div>
+                    <div class="min-w-0">
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-red-200 block">Informasi Koperasi Desa Merah Putih Gedangan</span>
+                        <h3 id="public-brochure-title" class="font-display font-bold text-sm sm:text-base truncate">Pengumuman Terbaru</h3>
+                    </div>
+                </div>
+                <button onclick="closeBrochurePopup()" aria-label="Tutup Pop-up Brosur" class="w-9 h-9 rounded-full bg-white/15 hover:bg-white/25 active:scale-95 flex items-center justify-center text-white transition shrink-0">
+                    <i class="ph-bold ph-x text-lg"></i>
+                </button>
+            </div>
+
+            <!-- Konten Gambar Brosur Resolusi Penuh (Tanpa Kompresi) -->
+            <div class="bg-slate-900 flex items-center justify-center max-h-[75vh] overflow-auto">
+                <img id="public-brochure-image" src="" alt="Brosur Koperasi Desa Merah Putih Gedangan" class="w-full h-auto object-contain block">
+            </div>
+
+            <!-- Footer Tombol Tutup -->
+            <div class="px-5 py-3.5 bg-white border-t border-slate-100 flex items-center justify-between gap-3">
+                <span class="text-[11px] text-slate-500">Klik tombol di samping untuk menutup brosur</span>
+                <button onclick="closeBrochurePopup()" class="px-5 py-2 rounded-xl bg-merah-600 hover:bg-merah-700 text-white font-bold text-xs sm:text-sm shadow-sm transition">
+                    Tutup Brosur
+                </button>
+            </div>
+        </div>
+    </div>
 
     <!-- ===================================================================== -->
     <!-- MODAL 1: LOGIN ADMIN                                                  -->
@@ -763,16 +915,16 @@
                     <input type="text" id="prod-unit" placeholder="Contoh: Tabung / Sak 5 Kg / Pouch 1 L / Kg / Box" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:border-merah-500">
                 </div>
 
-                <!-- Foto Produk: Upload File atau URL -->
+                <!-- Foto Produk: Upload File Asli Tanpa Kompresi atau URL -->
                 <div class="space-y-2.5 pt-1">
-                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider">Foto Barang (Upload Perangkat atau URL)</label>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider">Foto Barang (Kualitas Asli Tanpa Kompresi)</label>
                     
                     <div class="flex items-center gap-4">
-                        <img id="prod-img-preview" src="https://placehold.co/200x150/fee2e2/991b1b?text=Foto+Barang" alt="Preview" class="w-24 h-20 object-cover rounded-xl border border-slate-200 bg-slate-100 shrink-0">
+                        <img id="prod-img-preview" src="https://placehold.co/200x150/fee2e2/991b1b?text=Foto+Barang" alt="Preview" class="w-24 h-20 object-contain rounded-xl border border-slate-200 bg-slate-100 shrink-0">
                         <div class="flex-1 space-y-2">
                             <label class="flex items-center justify-center gap-2 px-3 py-2 rounded-xl border border-dashed border-merah-300 bg-merah-50/50 hover:bg-merah-50 text-merah-700 text-xs font-semibold cursor-pointer transition">
                                 <i class="ph-bold ph-upload-simple text-base"></i>
-                                <span>Pilih Foto dari Perangkat</span>
+                                <span>Pilih Foto HD dari Perangkat</span>
                                 <input type="file" id="prod-file-input" accept="image/*" onchange="handleImageFileUpload(event)" class="hidden">
                             </label>
                             <input type="url" id="prod-image-url" oninput="handleImageUrlInput(this.value)" placeholder="Atau tempel URL gambar (https://...)" class="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:bg-white focus:outline-none focus:border-merah-500">
@@ -815,10 +967,11 @@
         const SPREADSHEET_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbws4wnDy-_ShhFhme33uICa-XtYUiyUzpRv6HVEqUtK5lzE5lmNYe6Uekfpj9Wdt8J8/exec";
 
         const STORAGE_KEYS = {
-            PRODUCTS: 'kdmp_gedangan_products_v3',
-            SALES: 'kdmp_gedangan_sales_v3',
-            AUTH: 'kdmp_gedangan_admin_session_v3',
-            AUTO_EXCEL: 'kdmp_gedangan_auto_excel_v3'
+            PRODUCTS: 'kdmp_gedangan_products_v4',
+            SALES: 'kdmp_gedangan_sales_v4',
+            BROCHURE: 'kdmp_gedangan_brochure_v4',
+            AUTH: 'kdmp_gedangan_admin_session_v4',
+            AUTO_EXCEL: 'kdmp_gedangan_auto_excel_v4'
         };
 
         function createProductIllustration(bgHex, accentHex, title, subtitle, iconType) {
@@ -923,24 +1076,31 @@
 
         let products = [];
         let sales = [];
+        let brochureConfig = { enabled: false, title: '', image: '', updatedAt: '' };
+        let brochureAlreadyShownInSession = false;
         let isAdminLoggedIn = false;
         let currentPublicCategory = 'Semua';
         let pendingConfirmCallback = null;
 
         /**
-         * INISIALISASI APLIKASI & SINKRONISASI CLOUD (PRODUK + PENJUALAN)
+         * INISIALISASI APLIKASI & SINKRONISASI CLOUD (PRODUK + PENJUALAN + BROSUR)
          */
         document.addEventListener('DOMContentLoaded', async () => {
             loadStateFromStorage();
             setDefaultSaleDate();
             renderPublicCatalog();
             updateAuthUI();
+            syncBrochureFormFromConfig();
 
             const autoExcelPref = localStorage.getItem(STORAGE_KEYS.AUTO_EXCEL) === 'true';
             const autoExcelCheckbox = document.getElementById('auto-download-excel');
             if (autoExcelCheckbox) autoExcelCheckbox.checked = autoExcelPref;
 
-            await fetchAllDataFromCloud();
+            // Tampilkan pop-up brosur dari cache lokal lebih dulu jika ada
+            checkAndShowBrochurePopup();
+
+            // Tarik data terbaru (produk, penjualan, dan brosur) dari Google Spreadsheet
+            await fetchAllDataFromCloud(false, true);
         });
 
         function updateSyncIndicator(status) {
@@ -958,24 +1118,48 @@
             }
         }
 
-        async function fetchAllDataFromCloud(notifyUser = false) {
+        async function fetchAllDataFromCloud(notifyUser = false, isInitialLoad = false) {
             updateSyncIndicator('loading');
             try {
                 const response = await fetch(SPREADSHEET_WEBAPP_URL);
                 const result = await response.json();
 
                 if (result.status === 'success') {
+                    // 1. Sinkronkan Produk
                     if (Array.isArray(result.products) && result.products.length > 0) {
                         products = result.products;
-                        localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(products));
+                        try {
+                            localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(products));
+                        } catch (e) { /* Abaikan jika localStorage penuh oleh gambar HD */ }
                     } else {
                         await saveProducts(false);
                     }
 
+                    // 2. Sinkronkan Arsip Penjualan
                     if (Array.isArray(result.sales)) {
                         const localUnsynced = sales.filter(s => s.syncStatus !== 'SYNCED' && !result.sales.some(rs => rs.id === s.id));
                         sales = [...localUnsynced, ...result.sales];
                         saveSales();
+                    }
+
+                    // 3. Sinkronkan Pop-up Brosur
+                    if (result.brochure) {
+                        brochureConfig = {
+                            enabled: Boolean(result.brochure.enabled),
+                            title: result.brochure.title || '',
+                            image: result.brochure.image || '',
+                            updatedAt: result.brochure.updatedAt || ''
+                        };
+                        try {
+                            localStorage.setItem(STORAGE_KEYS.BROCHURE, JSON.stringify(brochureConfig));
+                        } catch (e) { /* Abaikan jika localStorage penuh */ }
+
+                        syncBrochureFormFromConfig();
+                        updateReopenBrochureButton();
+
+                        if (isInitialLoad) {
+                            checkAndShowBrochurePopup();
+                        }
                     }
 
                     renderPublicCatalog();
@@ -987,7 +1171,7 @@
                     }
                     updateSyncIndicator('synced');
                     if (notifyUser) {
-                        showToast('Data Diperbarui', 'Stok barang dan arsip penjualan berhasil disinkronkan dari server.', 'success');
+                        showToast('Data Diperbarui', 'Katalog, arsip penjualan, dan brosur berhasil disinkronkan dari server.', 'success');
                     }
                 } else {
                     updateSyncIndicator('offline');
@@ -1002,8 +1186,8 @@
         }
 
         async function refreshAllFromCloud() {
-            showToast('Memuat Data...', 'Mengambil stok & arsip penjualan terbaru dari server...', 'warning');
-            await fetchAllDataFromCloud(true);
+            showToast('Memuat Data...', 'Mengambil stok, arsip penjualan, dan brosur terbaru dari server...', 'warning');
+            await fetchAllDataFromCloud(true, false);
         }
 
         function loadStateFromStorage() {
@@ -1024,6 +1208,11 @@
                     saveSales();
                 }
 
+                const storedBrochure = localStorage.getItem(STORAGE_KEYS.BROCHURE);
+                if (storedBrochure) {
+                    brochureConfig = JSON.parse(storedBrochure);
+                }
+
                 isAdminLoggedIn = localStorage.getItem(STORAGE_KEYS.AUTH) === 'true';
             } catch (err) {
                 console.error('Gagal memuat penyimpanan lokal:', err);
@@ -1033,7 +1222,12 @@
         }
 
         async function saveProducts(notifyUser = false) {
-            localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(products));
+            try {
+                localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(products));
+            } catch (e) {
+                console.warn('Kapasitas localStorage penuh, menyimpan langsung ke server Spreadsheet.');
+            }
+
             try {
                 await fetch(SPREADSHEET_WEBAPP_URL, {
                     method: 'POST',
@@ -1046,13 +1240,13 @@
                 });
                 updateSyncIndicator('synced');
                 if (notifyUser) {
-                    showToast('Tersinkron ke Server', 'Perubahan katalog & stok barang berhasil disimpan ke server.', 'success');
+                    showToast('Tersinkron ke Server', 'Perubahan katalog & foto HD berhasil disimpan ke server.', 'success');
                 }
             } catch (err) {
                 console.error('Gagal menyinkronkan produk ke Spreadsheet:', err);
                 updateSyncIndicator('offline');
                 if (notifyUser) {
-                    showToast('Gagal Sinkron Server', 'Data tersimpan di perangkat ini, periksa koneksi internet.', 'error');
+                    showToast('Gagal Sinkron Server', 'Periksa koneksi internet Anda lalu coba lagi.', 'error');
                 }
             }
         }
@@ -1063,7 +1257,185 @@
         }
 
         function saveSales() {
-            localStorage.setItem(STORAGE_KEYS.SALES, JSON.stringify(sales));
+            try {
+                localStorage.setItem(STORAGE_KEYS.SALES, JSON.stringify(sales));
+            } catch (e) {
+                console.warn('Gagal menyimpan riwayat ke localStorage:', e);
+            }
+        }
+
+        /**
+         * FITUR POP-UP BROSUR BERANDA & MANAJEMEN BROSUR ADMIN
+         */
+        function checkAndShowBrochurePopup() {
+            updateReopenBrochureButton();
+            const isPublicVisible = !document.getElementById('view-public').classList.contains('hidden');
+            if (isPublicVisible && brochureConfig.enabled && brochureConfig.image && !brochureAlreadyShownInSession) {
+                openBrochurePopup(false);
+            }
+        }
+
+        function updateReopenBrochureButton() {
+            const btn = document.getElementById('btn-reopen-brochure');
+            if (!btn) return;
+            if (brochureConfig.enabled && brochureConfig.image) {
+                btn.classList.remove('hidden');
+                btn.classList.add('flex');
+            } else {
+                btn.classList.add('hidden');
+                btn.classList.remove('flex');
+            }
+        }
+
+        function openBrochurePopup(isManualClick = false) {
+            if (!brochureConfig.image) return;
+            document.getElementById('public-brochure-title').textContent = brochureConfig.title || 'Pengumuman Koperasi Desa Merah Putih Gedangan';
+            document.getElementById('public-brochure-image').src = brochureConfig.image;
+            document.getElementById('modal-public-brochure').classList.remove('hidden');
+            if (!isManualClick) {
+                brochureAlreadyShownInSession = true;
+            }
+        }
+
+        function closeBrochurePopup() {
+            document.getElementById('modal-public-brochure').classList.add('hidden');
+        }
+
+        function syncBrochureFormFromConfig() {
+            const enabledEl = document.getElementById('brochure-enabled');
+            const titleEl = document.getElementById('brochure-title');
+            const urlEl = document.getElementById('brochure-image-url');
+            const previewImg = document.getElementById('admin-brochure-preview-img');
+
+            if (!enabledEl) return;
+
+            enabledEl.checked = Boolean(brochureConfig.enabled);
+            titleEl.value = brochureConfig.title || '';
+            urlEl.value = (brochureConfig.image && !brochureConfig.image.startsWith('data:')) ? brochureConfig.image : '';
+
+            const fallbackImg = 'https://placehold.co/600x750/fef2f2/991b1b?text=Belum+Ada+Gambar+Brosur';
+            const currentImg = brochureConfig.image || fallbackImg;
+            previewImg.src = currentImg;
+            previewImg.dataset.currentImage = brochureConfig.image || '';
+
+            updateBrochurePreview();
+        }
+
+        function handleBrochureFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            // Baca file secara langsung tanpa kompresi agar brosur tajam dan jelas
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const rawDataUrl = e.target.result;
+                const previewImg = document.getElementById('admin-brochure-preview-img');
+                previewImg.src = rawDataUrl;
+                previewImg.dataset.currentImage = rawDataUrl;
+                document.getElementById('brochure-image-url').value = '';
+                document.getElementById('brochure-enabled').checked = true;
+                updateBrochurePreview();
+                showToast('Gambar Brosur Dimuat', 'Gambar brosur kualitas asli siap disimpan ke server.', 'success');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function handleBrochureUrlInput(url) {
+            const trimmed = url.trim();
+            const previewImg = document.getElementById('admin-brochure-preview-img');
+            if (trimmed) {
+                previewImg.src = trimmed;
+                previewImg.dataset.currentImage = trimmed;
+            }
+        }
+
+        function updateBrochurePreview() {
+            const isEnabled = document.getElementById('brochure-enabled').checked;
+            const titleVal = document.getElementById('brochure-title').value.trim();
+            const badge = document.getElementById('brochure-status-badge');
+            const previewTitle = document.getElementById('admin-brochure-preview-title');
+
+            previewTitle.textContent = titleVal || 'Pengumuman Koperasi Desa Merah Putih';
+            if (isEnabled) {
+                badge.className = 'px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800';
+                badge.textContent = 'Aktif (Muncul di Beranda)';
+            } else {
+                badge.className = 'px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-600';
+                badge.textContent = 'Nonaktif';
+            }
+        }
+
+        async function handleBrochureSave(e) {
+            e.preventDefault();
+            const enabled = document.getElementById('brochure-enabled').checked;
+            const title = document.getElementById('brochure-title').value.trim();
+            const image = document.getElementById('admin-brochure-preview-img').dataset.currentImage || '';
+
+            if (enabled && !image) {
+                showToast('Gambar Belum Dipilih', 'Silakan unggah gambar brosur terlebih dahulu sebelum mengaktifkan pop-up.', 'error');
+                return;
+            }
+
+            const btn = document.getElementById('btn-save-brochure');
+            const oldHtml = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="ph-bold ph-spinner animate-spin text-lg"></i><span>Menyimpan ke Server...</span>';
+
+            brochureConfig = {
+                enabled,
+                title,
+                image,
+                updatedAt: getTodayString()
+            };
+
+            try {
+                localStorage.setItem(STORAGE_KEYS.BROCHURE, JSON.stringify(brochureConfig));
+            } catch (err) { /* Abaikan jika ukuran HD melebihi kuota localStorage */ }
+
+            updateReopenBrochureButton();
+
+            try {
+                await fetch(SPREADSHEET_WEBAPP_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({
+                        action: 'SAVE_BROCHURE',
+                        brochure: brochureConfig
+                    })
+                });
+                showToast('Brosur Tersimpan', 'Pengaturan dan gambar brosur HD berhasil disimpan ke Google Spreadsheet.', 'success');
+            } catch (error) {
+                console.error('Gagal menyimpan brosur ke server:', error);
+                showToast('Gagal Simpan ke Server', 'Periksa koneksi internet Anda lalu coba simpan ulang.', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = oldHtml;
+            }
+        }
+
+        function confirmClearBrochure() {
+            openConfirmModal(
+                'Hapus Brosur Pop-up?',
+                'Gambar brosur akan dihapus dan pop-up di halaman beranda akan dinonaktifkan.',
+                async () => {
+                    brochureConfig = { enabled: false, title: '', image: '', updatedAt: getTodayString() };
+                    localStorage.removeItem(STORAGE_KEYS.BROCHURE);
+                    syncBrochureFormFromConfig();
+                    updateReopenBrochureButton();
+
+                    await fetch(SPREADSHEET_WEBAPP_URL, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        body: JSON.stringify({
+                            action: 'SAVE_BROCHURE',
+                            brochure: brochureConfig
+                        })
+                    });
+                    showToast('Brosur Dihapus', 'Pop-up brosur berhasil dinonaktifkan dan dihapus dari server.', 'warning');
+                }
+            );
         }
 
         /**
@@ -1093,12 +1465,11 @@
                 return;
             }
 
-            // Tampilkan loading sebentar dan pastikan data terbaru dari server ditarik
             const originalBtnHtml = btnCheck.innerHTML;
             btnCheck.disabled = true;
             btnCheck.innerHTML = '<i class="ph-bold ph-spinner animate-spin text-lg"></i><span>Mengecek Data...</span>';
 
-            await fetchAllDataFromCloud(false);
+            await fetchAllDataFromCloud(false, false);
 
             btnCheck.disabled = false;
             btnCheck.innerHTML = originalBtnHtml;
@@ -1112,10 +1483,8 @@
             const todayStr = getTodayString();
             const todayObj = new Date(todayStr + 'T00:00:00');
 
-            // Cari semua riwayat transaksi yang cocok dengan KK atau NIK warga tersebut
             const matchingSales = sales.filter(s => String(s.kk).trim() === kk || String(s.nik).trim() === nik);
 
-            // Ambil nama pembeli dari transaksi terbaru jika ada
             const latestExactNik = matchingSales.find(s => String(s.nik).trim() === nik);
             const latestAny = matchingSales[0];
             const displayName = latestExactNik ? latestExactNik.buyerName : (latestAny ? latestAny.buyerName : 'Warga Desa Gedangan');
@@ -1123,7 +1492,6 @@
             document.getElementById('result-citizen-name').textContent = displayName;
             document.getElementById('result-citizen-ids').textContent = `No. KK: ${kk}  •  NIK: ${nik}`;
 
-            // 1. Hitung Sisa Kuota Gas LPG 3 Kg (Maks 1 tabung per 1 KK dalam 7 hari)
             const lpgHistory = sales.filter(s => {
                 const isLpg = s.subsidyRule === 'LPG_WEEKLY' || s.productName.toLowerCase().includes('lpg');
                 if (!isLpg || String(s.kk).trim() !== kk) return false;
@@ -1140,7 +1508,6 @@
                 lpgNote = `Sudah terpakai pada ${formatTanggalIndo(lpgHistory[0].date)}. Dapat membeli lagi dalam ${waitDays} hari.`;
             }
 
-            // 2. Hitung Sisa Kuota Beras SPHP 5 Kg (Maks 2 sak per 1 NIK per hari)
             const berasHistory = sales.filter(s => {
                 const isBeras = s.subsidyRule === 'BERAS_DAILY' || s.productName.toLowerCase().includes('sphp');
                 return isBeras && String(s.nik).trim() === nik && s.date === todayStr;
@@ -1151,7 +1518,6 @@
                 ? `Tersisa ${berasRemaining} sak (5 Kg) untuk pembelian hari ini.`
                 : `Kuota harian (2 sak) sudah terpakai hari ini. Tersedia kembali besok.`;
 
-            // 3. Hitung Sisa Kuota MINYAKITA 1 Liter (Maks 2 pouch per 1 NIK per hari)
             const minyakHistory = sales.filter(s => {
                 const isMinyak = s.subsidyRule === 'MINYAK_DAILY' || s.productName.toLowerCase().includes('minyakita');
                 return isMinyak && String(s.nik).trim() === nik && s.date === todayStr;
@@ -1162,7 +1528,6 @@
                 ? `Tersisa ${minyakRemaining} pouch (1 Liter) untuk pembelian hari ini.`
                 : `Kuota harian (2 pouch) sudah terpakai hari ini. Tersedia kembali besok.`;
 
-            // Render 3 Kartu Status Kuota
             const quotaCardsHtml = [
                 {
                     title: 'Gas LPG 3 Kg',
@@ -1212,7 +1577,6 @@
 
             document.getElementById('result-quota-cards').innerHTML = quotaCardsHtml;
 
-            // Render Tabel Riwayat Pembelian Warga
             document.getElementById('result-history-count').textContent = `${matchingSales.length} Transaksi`;
             const tbody = document.getElementById('result-history-tbody');
 
@@ -1309,18 +1673,18 @@
             const worksheet = XLSX.utils.json_to_sheet(excelRows);
 
             worksheet['!cols'] = [
-                { wch: 5 },   // No
-                { wch: 20 },  // ID Transaksi
-                { wch: 16 },  // Tanggal
-                { wch: 24 },  // Nama Pembeli
-                { wch: 20 },  // Nomor KK
-                { wch: 20 },  // Nomor NIK
-                { wch: 12 },  // Kategori
-                { wch: 30 },  // Nama Barang
-                { wch: 10 },  // Jumlah
-                { wch: 18 },  // Harga Satuan
-                { wch: 18 },  // Total Bayar
-                { wch: 20 }   // Status Server
+                { wch: 5 },
+                { wch: 20 },
+                { wch: 16 },
+                { wch: 24 },
+                { wch: 20 },
+                { wch: 20 },
+                { wch: 12 },
+                { wch: 30 },
+                { wch: 10 },
+                { wch: 18 },
+                { wch: 18 },
+                { wch: 20 }
             ];
 
             const workbook = XLSX.utils.book_new();
@@ -1488,9 +1852,10 @@
                 populateSaleProductSelect();
                 renderSalesHistory();
                 renderAdminProducts();
+                syncBrochureFormFromConfig();
                 updateQuotaPreview();
 
-                await fetchAllDataFromCloud(false);
+                await fetchAllDataFromCloud(false, false);
             } else {
                 adminView.classList.add('hidden');
                 publicView.classList.remove('hidden');
@@ -1500,6 +1865,7 @@
                     navAdminBtn.className = 'inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-100 border border-slate-200 transition';
                 }
                 renderPublicCatalog();
+                updateReopenBrochureButton();
             }
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
@@ -1627,8 +1993,8 @@
 
                 return `
                     <article class="bg-white rounded-2xl border border-slate-200/90 overflow-hidden shadow-sm hover:shadow-md hover:-translate-y-0.5 transition duration-200 flex flex-col">
-                        <div class="relative h-48 bg-slate-100 overflow-hidden">
-                            <img src="${p.image}" alt="${p.name}" onerror="this.src='https://placehold.co/400x260/fee2e2/991b1b?text=Koperasi+Gedangan'" class="w-full h-full object-cover ${p.stock <= 0 ? 'grayscale opacity-75' : ''}">
+                        <div class="relative h-52 bg-white border-b border-slate-100 overflow-hidden flex items-center justify-center p-2">
+                            <img src="${p.image}" alt="${p.name}" onerror="this.src='https://placehold.co/400x260/fee2e2/991b1b?text=Koperasi+Gedangan'" class="w-full h-full object-contain ${p.stock <= 0 ? 'grayscale opacity-75' : ''}">
                             <span class="absolute top-3 left-3 px-2.5 py-1 rounded-lg text-[11px] font-bold uppercase tracking-wide ${catBadgeClass}">
                                 ${p.category}
                             </span>
@@ -1663,20 +2029,34 @@
         function switchAdminTab(tab) {
             const tabSales = document.getElementById('admin-tab-sales');
             const tabProducts = document.getElementById('admin-tab-products');
+            const tabBrochure = document.getElementById('admin-tab-brochure');
+
             const btnSales = document.getElementById('tab-btn-sales');
             const btnProducts = document.getElementById('tab-btn-products');
+            const btnBrochure = document.getElementById('tab-btn-brochure');
+
+            const inactiveBtnClass = 'flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold text-slate-600 hover:text-slate-900 transition';
+            const activeBtnClass = 'flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold bg-white text-merah-700 shadow-sm transition';
+
+            tabSales.classList.add('hidden');
+            tabProducts.classList.add('hidden');
+            tabBrochure.classList.add('hidden');
+
+            btnSales.className = inactiveBtnClass;
+            btnProducts.className = inactiveBtnClass;
+            btnBrochure.className = inactiveBtnClass;
 
             if (tab === 'products') {
-                tabSales.classList.add('hidden');
                 tabProducts.classList.remove('hidden');
-                btnProducts.className = 'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-white text-merah-700 shadow-sm transition';
-                btnSales.className = 'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-slate-600 hover:text-slate-900 transition';
+                btnProducts.className = activeBtnClass;
                 renderAdminProducts();
+            } else if (tab === 'brochure') {
+                tabBrochure.classList.remove('hidden');
+                btnBrochure.className = activeBtnClass;
+                syncBrochureFormFromConfig();
             } else {
-                tabProducts.classList.add('hidden');
                 tabSales.classList.remove('hidden');
-                btnSales.className = 'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-white text-merah-700 shadow-sm transition';
-                btnProducts.className = 'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-slate-600 hover:text-slate-900 transition';
+                btnSales.className = activeBtnClass;
                 populateSaleProductSelect();
                 renderSalesHistory();
             }
@@ -1706,8 +2086,8 @@
 
                 return `
                     <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm flex flex-col">
-                        <div class="relative h-40 bg-slate-100">
-                            <img src="${p.image}" alt="${p.name}" onerror="this.src='https://placehold.co/400x260/fee2e2/991b1b?text=Foto+Barang'" class="w-full h-full object-cover">
+                        <div class="relative h-44 bg-white border-b border-slate-100 flex items-center justify-center p-2">
+                            <img src="${p.image}" alt="${p.name}" onerror="this.src='https://placehold.co/400x260/fee2e2/991b1b?text=Foto+Barang'" class="w-full h-full object-contain">
                             <span class="absolute top-3 left-3 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-slate-900/80 text-white backdrop-blur-sm">
                                 ${p.category}
                             </span>
@@ -1797,25 +2177,15 @@
         function handleImageFileUpload(event) {
             const file = event.target.files[0];
             if (!file) return;
+
+            // Membaca gambar produk langsung dalam kualitas asli (tanpa kompresi canvas) agar tajam tidak buram
             const reader = new FileReader();
             reader.onload = function(e) {
-                const img = new Image();
-                img.onload = function() {
-                    const canvas = document.createElement('canvas');
-                    const maxWidth = 360;
-                    const scale = Math.min(1, maxWidth / img.width);
-                    canvas.width = img.width * scale;
-                    canvas.height = img.height * scale;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-                    const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.65);
-                    const preview = document.getElementById('prod-img-preview');
-                    preview.src = compressedDataUrl;
-                    preview.dataset.currentImage = compressedDataUrl;
-                    document.getElementById('prod-image-url').value = '';
-                };
-                img.src = e.target.result;
+                const rawDataUrl = e.target.result;
+                const preview = document.getElementById('prod-img-preview');
+                preview.src = rawDataUrl;
+                preview.dataset.currentImage = rawDataUrl;
+                document.getElementById('prod-image-url').value = '';
             };
             reader.readAsDataURL(file);
         }
@@ -1844,7 +2214,7 @@
                 const idx = products.findIndex(p => p.id === id);
                 if (idx !== -1) {
                     products[idx] = { ...products[idx], name, category, subsidyRule, price, stock, unit, image };
-                    showToast('Barang Diperbarui', `Menyimpan perubahan "${name}" ke server...`, 'warning');
+                    showToast('Barang Diperbarui', `Menyimpan perubahan "${name}" kualitas asli ke server...`, 'warning');
                 }
             } else {
                 const newProd = {
@@ -1858,7 +2228,7 @@
                     image
                 };
                 products.unshift(newProd);
-                showToast('Barang Ditambahkan', `Menyimpan "${name}" ke server...`, 'warning');
+                showToast('Barang Ditambahkan', `Menyimpan "${name}" kualitas asli ke server...`, 'warning');
             }
 
             closeProductModal();
